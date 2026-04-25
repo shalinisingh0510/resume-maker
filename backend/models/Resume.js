@@ -57,6 +57,19 @@ const resumeSchema = new mongoose.Schema({
     startDate: { type: String, default: '' },
     endDate: { type: String, default: '' }
   }],
+  customSections: [{
+    title: { type: String, default: '' },
+    content: { type: String, default: '' },
+    items: [{ type: String }]
+  }],
+  sectionVisibility: {
+    summary: { type: Boolean, default: true },
+    experience: { type: Boolean, default: true },
+    education: { type: Boolean, default: true },
+    skills: { type: Boolean, default: true },
+    projects: { type: Boolean, default: true },
+    customSections: { type: Boolean, default: true }
+  },
   // LaTeX source code (optional)
   latexSource: {
     type: String,
@@ -74,6 +87,30 @@ const resumeSchema = new mongoose.Schema({
   aiSuggestions: [{
     type: String
   }],
+  scoreHistory: [{
+    jobTitle: { type: String, default: '' },
+    companyName: { type: String, default: '' },
+    companyType: { type: String, default: '' },
+    overallScore: { type: Number, default: null },
+    summary: { type: String, default: '' },
+    suggestions: [{ type: String }],
+    strengths: [{ type: String }],
+    sourceType: { type: String, default: 'resume' },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  enhancementHistory: [{
+    enhancedContent: { type: String, default: '' },
+    improvements: [{ type: String }],
+    keywords: [{ type: String }],
+    tips: [{ type: String }],
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   // Track if resume was built from LaTeX
   isLatexResume: {
     type: Boolean,
@@ -82,7 +119,7 @@ const resumeSchema = new mongoose.Schema({
   history: [{
     eventType: {
       type: String,
-      enum: ['save', 'download'],
+      enum: ['save', 'download', 'score', 'enhance', 'import'],
       required: true
     },
     title: {

@@ -40,6 +40,7 @@ const Dashboard = () => {
 
   const getDownloadCount = (resume) =>
     (resume.history || []).filter((entry) => entry.eventType === 'download').length;
+  const getScoreCount = (resume) => (resume.scoreHistory || []).length;
 
   if (loading) {
     return (
@@ -183,6 +184,10 @@ const Dashboard = () => {
                   <span>
                     Downloads:{' '}
                     <span className="text-[var(--text-secondary)] font-medium">{getDownloadCount(resume)}</span>
+                  </span>
+                  <span>
+                    ATS Scores:{' '}
+                    <span className="text-[var(--text-secondary)] font-medium">{getScoreCount(resume)}</span>
                   </span>
                 </div>
 

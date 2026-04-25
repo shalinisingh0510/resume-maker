@@ -44,7 +44,11 @@ export const resumeAPI = {
   update: (id, data) => api.put(`/resume/${id}`, data),
   delete: (id) => api.delete(`/resume/${id}`),
   getHistory: (id) => api.get(`/resume/${id}/history`),
-  createHistoryEvent: (id, data) => api.post(`/resume/${id}/history-event`, data)
+  createHistoryEvent: (id, data) => api.post(`/resume/${id}/history-event`, data),
+  importFromFile: (formData) =>
+    api.post('/resume/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
 };
 
 export const templateAPI = {

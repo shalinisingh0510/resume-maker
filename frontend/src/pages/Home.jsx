@@ -102,14 +102,14 @@ const Home = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {featuredTemplates.map((tpl) => (
               <div key={tpl._id} className="group card p-0 overflow-hidden cursor-pointer" onClick={() => handleUseTemplate(tpl.templateId)}>
-                <div className="relative aspect-[3/4] bg-[var(--bg-primary)] overflow-hidden">
-                  <div className="absolute inset-0 flex justify-center items-start transition-transform duration-700 group-hover:scale-110">
+                <div className="relative aspect-[4/5] bg-white overflow-hidden">
+                  <div className="absolute inset-0 flex justify-center items-start transition-transform duration-700 group-hover:scale-105">
                     <div
                       className="pointer-events-none"
                       style={{
                         width: '800px',
                         height: '1122px',
-                        transform: 'scale(0.38)',
+                        transform: 'scale(0.56)',
                         transformOrigin: 'top center'
                       }}
                     >

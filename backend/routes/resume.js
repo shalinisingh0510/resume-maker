@@ -1,9 +1,13 @@
 const express = require('express');
 const Resume = require('../models/Resume');
 const User = require('../models/User');
+const Groq = require('groq-sdk');
+const multer = require('multer');
 const { protect, checkResumeLimit } = require('../middleware/auth');
+const { extractTextFromPdf } = require('../utils/pdfExtractor');
 
 const router = express.Router();
+const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 
 const MAX_HISTORY_ENTRIES = 30;
 
@@ -15,11 +19,15 @@ const sanitizeResumePayload = (payload = {}) => ({
   experience: payload.experience,
   skills: payload.skills,
   projects: payload.projects,
+  customSections: payload.customSections,
+  sectionVisibility: payload.sectionVisibility,
   latexSource: payload.latexSource,
   isLatexResume: payload.isLatexResume,
   thumbnail: payload.thumbnail,
   aiScore: payload.aiScore,
-  aiSuggestions: payload.aiSuggestions
+  aiSuggestions: payload.aiSuggestions,
+  scoreHistory: payload.scoreHistory,
+  enhancementHistory: payload.enhancementHistory
 });
 
 const buildResumeSnapshot = (resumeLike = {}) => ({
@@ -30,12 +38,15 @@ const buildResumeSnapshot = (resumeLike = {}) => ({
   experience: resumeLike.experience || [],
   skills: resumeLike.skills || [],
   projects: resumeLike.projects || [],
+  customSections: resumeLike.customSections || [],
+  sectionVisibility: resumeLike.sectionVisibility || {},
   latexSource: resumeLike.latexSource || '',
   isLatexResume: Boolean(resumeLike.isLatexResume)
 });
 
 const appendHistoryEntry = (resumeDoc, eventType = 'save') => {
-  const normalizedType = eventType === 'download' ? 'download' : 'save';
+  const allowedEvents = new Set(['save', 'download', 'score', 'enhance', 'import']);
+  const normalizedType = allowedEvents.has(eventType) ? eventType : 'save';
   const entry = {
     eventType: normalizedType,
     title: resumeDoc.title || '',
@@ -52,6 +63,118 @@ const appendHistoryEntry = (resumeDoc, eventType = 'save') => {
   } else {
     resumeDoc.history = history;
   }
+};
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const name = (file.originalname || '').toLowerCase();
+    if (name.endsWith('.pdf') || name.endsWith('.txt')) return cb(null, true);
+    return cb(new Error('Only PDF or TXT files are supported.'));
+  }
+});
+
+const importUpload = (req, res, next) => {
+  upload.single('resumeFile')(req, res, (err) => {
+    if (!err) return next();
+    return res.status(400).json({ message: err.message || 'Invalid resume upload.' });
+  });
+};
+
+const normalizeImportedData = (data = {}, template = 'overleaf-jake') => {
+  const safeArray = (value) => (Array.isArray(value) ? value : []);
+  const safeString = (value) => (typeof value === 'string' ? value : '');
+
+  return {
+    title: safeString(data.title) || 'Imported Resume',
+    template,
+    personalDetails: {
+      fullName: safeString(data?.personalDetails?.fullName),
+      email: safeString(data?.personalDetails?.email),
+      phone: safeString(data?.personalDetails?.phone),
+      location: safeString(data?.personalDetails?.location),
+      linkedin: safeString(data?.personalDetails?.linkedin),
+      github: safeString(data?.personalDetails?.github),
+      website: safeString(data?.personalDetails?.website),
+      summary: safeString(data?.personalDetails?.summary)
+    },
+    education: safeArray(data.education).map((e) => ({
+      institution: safeString(e?.institution),
+      degree: safeString(e?.degree),
+      fieldOfStudy: safeString(e?.fieldOfStudy),
+      startDate: safeString(e?.startDate),
+      endDate: safeString(e?.endDate),
+      gpa: safeString(e?.gpa),
+      description: safeString(e?.description)
+    })),
+    experience: safeArray(data.experience).map((e) => ({
+      company: safeString(e?.company),
+      position: safeString(e?.position),
+      location: safeString(e?.location),
+      startDate: safeString(e?.startDate),
+      endDate: safeString(e?.endDate),
+      current: Boolean(e?.current),
+      description: safeString(e?.description),
+      highlights: safeArray(e?.highlights).map((h) => safeString(h)).filter(Boolean)
+    })),
+    skills: safeArray(data.skills).map((s) => ({
+      category: safeString(s?.category),
+      items: safeArray(s?.items).map((i) => safeString(i)).filter(Boolean)
+    })),
+    projects: safeArray(data.projects).map((p) => ({
+      name: safeString(p?.name),
+      description: safeString(p?.description),
+      technologies: safeArray(p?.technologies).map((t) => safeString(t)).filter(Boolean),
+      link: safeString(p?.link),
+      startDate: safeString(p?.startDate),
+      endDate: safeString(p?.endDate)
+    })),
+    customSections: safeArray(data.customSections).map((s) => ({
+      title: safeString(s?.title),
+      content: safeString(s?.content),
+      items: safeArray(s?.items).map((i) => safeString(i)).filter(Boolean)
+    })),
+    sectionVisibility: {
+      summary: data?.sectionVisibility?.summary !== false,
+      experience: data?.sectionVisibility?.experience !== false,
+      education: data?.sectionVisibility?.education !== false,
+      skills: data?.sectionVisibility?.skills !== false,
+      projects: data?.sectionVisibility?.projects !== false,
+      customSections: data?.sectionVisibility?.customSections !== false
+    },
+    latexSource: '',
+    isLatexResume: false
+  };
+};
+
+const fallbackStructureFromText = (text = '', template = 'overleaf-jake') => {
+  const lines = String(text)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const emailLine = lines.find((line) => /@/.test(line)) || '';
+  const phoneLine = lines.find((line) => /\+?\d[\d\s\-()]{7,}/.test(line)) || '';
+  const nameLine = lines[0] || 'Imported Candidate';
+  const summary = lines.slice(0, 4).join(' ').slice(0, 400);
+
+  return normalizeImportedData(
+    {
+      title: `${nameLine} Resume`,
+      personalDetails: {
+        fullName: nameLine,
+        email: emailLine,
+        phone: phoneLine,
+        summary
+      },
+      experience: [{ company: '', position: '', highlights: [summary].filter(Boolean) }],
+      education: [{ institution: '', degree: '', fieldOfStudy: '' }],
+      skills: [{ category: 'General', items: [] }],
+      projects: []
+    },
+    template
+  );
 };
 
 // POST /api/resume - Create a new resume
@@ -76,6 +199,75 @@ router.post('/', protect, checkResumeLimit, async (req, res) => {
   } catch (error) {
     console.error('Create Resume Error:', error);
     res.status(500).json({ message: 'Server error creating resume' });
+  }
+});
+
+// POST /api/resume/import - Parse uploaded resume into editable structured format
+router.post('/import', protect, importUpload, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please upload a resume file.' });
+    }
+
+    const template = req.body?.template || 'overleaf-jake';
+    const mime = req.file.mimetype || '';
+    const isPdf = mime === 'application/pdf' || req.file.originalname.toLowerCase().endsWith('.pdf');
+    let extractedText = '';
+
+    if (isPdf) {
+      const extracted = await extractTextFromPdf(req.file.buffer);
+      extractedText = extracted.text || '';
+    } else {
+      extractedText = req.file.buffer.toString('utf8');
+    }
+
+    extractedText = String(extractedText || '').trim();
+    if (extractedText.length < 40) {
+      return res.status(400).json({
+        message: 'Could not extract enough text from this resume. Try another PDF or upload as TXT.'
+      });
+    }
+
+    let structuredResume = null;
+
+    if (groq) {
+      try {
+        const completion = await groq.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          temperature: 0.2,
+          max_tokens: 2500,
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are a resume parser. Convert plain resume text into strict JSON object with this shape: {title, personalDetails:{fullName,email,phone,location,linkedin,github,website,summary}, education:[{institution,degree,fieldOfStudy,startDate,endDate,gpa,description}], experience:[{company,position,location,startDate,endDate,current,description,highlights}], skills:[{category,items}], projects:[{name,description,technologies,link,startDate,endDate}], customSections:[{title,content,items}], sectionVisibility:{summary,experience,education,skills,projects,customSections}}. Do not return markdown.'
+            },
+            {
+              role: 'user',
+              content: `Template selected: ${template}\n\nResume text:\n${extractedText.slice(0, 12000)}`
+            }
+          ]
+        });
+
+        const content = completion?.choices?.[0]?.message?.content || '{}';
+        structuredResume = JSON.parse(content);
+      } catch (error) {
+        structuredResume = null;
+      }
+    }
+
+    const normalized = structuredResume
+      ? normalizeImportedData(structuredResume, template)
+      : fallbackStructureFromText(extractedText, template);
+
+    return res.json({
+      success: true,
+      data: normalized
+    });
+  } catch (error) {
+    console.error('Resume Import Error:', error);
+    return res.status(500).json({ message: 'Failed to import resume file.' });
   }
 });
 

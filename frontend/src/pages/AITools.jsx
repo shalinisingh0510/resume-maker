@@ -47,7 +47,12 @@ const AITools = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!selectedResumeId && !textInput.trim() && !resumeFile) {
+    if (mode === 'enhance' && !selectedResumeId) {
+      toast.error('Select one of your saved resumes to use AI enhancement');
+      return;
+    }
+
+    if (mode === 'score' && !selectedResumeId && !textInput.trim() && !resumeFile) {
       toast.error('Please select a resume, paste text, or upload a file');
       return;
     }
@@ -72,11 +77,9 @@ const AITools = () => {
         
         response = await aiAPI.score(formData);
       } else {
-        // Enhancement still uses JSON for now as it's typically for internal resumes
         const payload = {
-          resumeId: selectedResumeId || undefined,
-          resumeText: !selectedResumeId ? textInput : undefined,
-          jobTitle: jobTitle
+          resumeId: selectedResumeId,
+          jobTitle
         };
         response = await aiAPI.enhance(payload);
       }
@@ -160,7 +163,9 @@ const AITools = () => {
             {/* Input Options */}
             <div className="space-y-6">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[var(--text-muted)]">Option 1: Select Saved Resume</label>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[var(--text-muted)]">
+                  {mode === 'enhance' ? 'Select Saved Resume (Required)' : 'Option 1: Select Saved Resume'}
+                </label>
                 <select
                   value={selectedResumeId}
                   onChange={(e) => {
@@ -179,69 +184,82 @@ const AITools = () => {
                 </select>
               </div>
 
-              <div className="relative py-2">
-                 <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[var(--border-color)]"></div>
-                 </div>
-                 <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
-                    <span className="bg-[var(--bg-card)] px-3 text-[var(--text-muted)]">OR</span>
-                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[var(--text-muted)]">Option 2: Upload Resume File (PDF/TXT)</label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    id="resume-upload"
-                    accept=".pdf,.txt"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <label 
-                    htmlFor="resume-upload"
-                    className={`flex items-center justify-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${resumeFile ? 'border-primary bg-primary/5' : 'border-[var(--border-color)] hover:border-primary/50'}`}
-                  >
-                    <HiUpload className={resumeFile ? 'text-primary' : 'text-[var(--text-muted)]'} size={24} />
-                    <div className="text-left">
-                      <p className="text-sm font-bold">{resumeFile ? resumeFile.name : 'Click to upload resume'}</p>
-                      <p className="text-[10px] text-[var(--text-muted)]">PDF or TXT, max 5MB</p>
+              {mode === 'score' ? (
+                <>
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-[var(--border-color)]"></div>
                     </div>
-                  </label>
+                    <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
+                      <span className="bg-[var(--bg-card)] px-3 text-[var(--text-muted)]">OR</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[var(--text-muted)]">Option 2: Upload Resume File (PDF/TXT)</label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        id="resume-upload"
+                        accept=".pdf,.txt"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="resume-upload"
+                        className={`flex items-center justify-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${resumeFile ? 'border-primary bg-primary/5' : 'border-[var(--border-color)] hover:border-primary/50'}`}
+                      >
+                        <HiUpload className={resumeFile ? 'text-primary' : 'text-[var(--text-muted)]'} size={24} />
+                        <div className="text-left">
+                          <p className="text-sm font-bold">{resumeFile ? resumeFile.name : 'Click to upload resume'}</p>
+                          <p className="text-[10px] text-[var(--text-muted)]">PDF or TXT, max 15MB</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-[var(--border-color)]"></div>
+                    </div>
+                    <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
+                      <span className="bg-[var(--bg-card)] px-3 text-[var(--text-muted)]">OR</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[var(--text-muted)]">Option 3: Paste Resume Text</label>
+                    <textarea
+                      value={textInput}
+                      onChange={(e) => {
+                        setTextInput(e.target.value);
+                        if (e.target.value) {
+                          setSelectedResumeId('');
+                          setResumeFile(null);
+                        }
+                      }}
+                      className="input min-h-[150px] text-sm font-medium"
+                      placeholder="Paste your professional summary or experience bullet points here..."
+                      disabled={!!selectedResumeId || !!resumeFile}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 text-xs text-primary">
+                  Enhancement currently works only for resumes built in this website (saved resumes).
                 </div>
-              </div>
-
-              <div className="relative py-2">
-                 <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[var(--border-color)]"></div>
-                 </div>
-                 <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
-                    <span className="bg-[var(--bg-card)] px-3 text-[var(--text-muted)]">OR</span>
-                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[var(--text-muted)]">Option 3: Paste Resume Text</label>
-                <textarea
-                  value={textInput}
-                  onChange={(e) => {
-                    setTextInput(e.target.value);
-                    if (e.target.value) {
-                      setSelectedResumeId('');
-                      setResumeFile(null);
-                    }
-                  }}
-                  className="input min-h-[150px] text-sm font-medium"
-                  placeholder="Paste your professional summary or experience bullet points here..."
-                  disabled={!!selectedResumeId || !!resumeFile}
-                />
-              </div>
+              )}
             </div>
 
             <button 
               type="submit" 
               className="btn btn-primary w-full h-14 text-lg gap-3"
-              disabled={loading || (!selectedResumeId && !textInput.trim() && !resumeFile)}
+              disabled={
+                loading ||
+                (mode === 'enhance'
+                  ? !selectedResumeId
+                  : (!selectedResumeId && !textInput.trim() && !resumeFile))
+              }
             >
               {loading ? (
                 <>

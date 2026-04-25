@@ -71,6 +71,19 @@ const buildResumeText = (resume) => {
       text += `${skill.category}: ${skill.items.join(', ')}\n`;
     });
   }
+  if (resume.projects && resume.projects.length > 0) {
+    text += '\n--- PROJECTS ---\n';
+    resume.projects.forEach(project => {
+      text += `${project.name}\n${project.description}\n`;
+    });
+  }
+  if (resume.customSections && resume.customSections.length > 0) {
+    text += '\n--- ADDITIONAL SECTIONS ---\n';
+    resume.customSections.forEach(section => {
+      text += `${section.title}\n${section.content}\n`;
+      if (section.items) section.items.forEach(item => { text += `- ${item}\n`; });
+    });
+  }
   return text;
 };
 
@@ -88,15 +101,19 @@ const cleanAIResponse = (content) => {
 // POST /api/ai/enhance - AI Resume Enhancement
 router.post('/enhance', protect, checkAILimit, async (req, res) => {
   try {
-    const { resumeId, resumeText } = req.body;
-    let textToEnhance = resumeText;
-    if (resumeId && !resumeText) {
-      const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
-      if (!resume) return res.status(404).json({ message: 'Resume not found' });
-      textToEnhance = buildResumeText(resume);
+    const { resumeId } = req.body || {};
+    if (!resumeId || resumeId === 'undefined') {
+      return res.status(400).json({
+        message: 'Select one of your saved resumes to use AI enhancement.'
+      });
     }
+
+    const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
+    if (!resume) return res.status(404).json({ message: 'Resume not found' });
+
+    const textToEnhance = buildResumeText(resume);
     if (!textToEnhance || textToEnhance.trim().length === 0) {
-      return res.status(400).json({ message: 'No resume content provided' });
+      return res.status(400).json({ message: 'Selected resume has no content to enhance.' });
     }
 
     const truncatedText = textToEnhance.substring(0, 4000);
@@ -114,6 +131,46 @@ router.post('/enhance', protect, checkAILimit, async (req, res) => {
 
     const aiResponse = cleanAIResponse(completion.choices[0].message.content);
     await User.findByIdAndUpdate(req.user._id, { $inc: { aiUsageCount: 1 } });
+
+    resume.enhancementHistory = Array.isArray(resume.enhancementHistory)
+      ? resume.enhancementHistory
+      : [];
+    resume.history = Array.isArray(resume.history) ? resume.history : [];
+
+    resume.enhancementHistory.push({
+      enhancedContent: aiResponse.enhancedContent || '',
+      improvements: Array.isArray(aiResponse.improvements) ? aiResponse.improvements : [],
+      keywords: Array.isArray(aiResponse.keywords) ? aiResponse.keywords : [],
+      tips: Array.isArray(aiResponse.tips) ? aiResponse.tips : []
+    });
+
+    resume.history.push({
+      eventType: 'enhance',
+      title: resume.title || '',
+      template: resume.template || '',
+      thumbnail: resume.thumbnail || '',
+      latexSource: resume.latexSource || '',
+      snapshot: {
+        personalDetails: resume.personalDetails || {},
+        education: resume.education || [],
+        experience: resume.experience || [],
+        skills: resume.skills || [],
+        projects: resume.projects || [],
+        customSections: resume.customSections || [],
+        sectionVisibility: resume.sectionVisibility || {}
+      }
+    });
+
+    if (resume.history.length > 30) {
+      resume.history = resume.history.slice(resume.history.length - 30);
+    }
+    if (resume.enhancementHistory.length > 50) {
+      resume.enhancementHistory = resume.enhancementHistory.slice(
+        resume.enhancementHistory.length - 50
+      );
+    }
+    await resume.save();
+
     res.json({ success: true, data: aiResponse, aiUsageCount: (req.user.aiUsageCount || 0) + 1 });
   } catch (error) {
     res.status(500).json({ message: error.message || 'Error processing AI enhancement' });
@@ -206,10 +263,49 @@ Provide a comprehensive, high-quality analysis in JSON: {overallScore, breakdown
 
     await User.findByIdAndUpdate(req.user._id, { $inc: { aiUsageCount: 1 } });
     if (resumeId && resumeId !== 'undefined') {
-      await Resume.findByIdAndUpdate(resumeId, {
-        aiScore: aiFinal.overallScore,
-        aiSuggestions: aiFinal.suggestions
-      });
+      const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
+      if (resume) {
+        resume.aiScore = aiFinal.overallScore;
+        resume.aiSuggestions = Array.isArray(aiFinal.suggestions) ? aiFinal.suggestions : [];
+        resume.scoreHistory = Array.isArray(resume.scoreHistory) ? resume.scoreHistory : [];
+        resume.history = Array.isArray(resume.history) ? resume.history : [];
+
+        resume.scoreHistory.push({
+          jobTitle: targetJob,
+          companyName: targetCompany,
+          companyType: cType,
+          overallScore: aiFinal.overallScore,
+          summary: aiFinal.summary || '',
+          suggestions: Array.isArray(aiFinal.suggestions) ? aiFinal.suggestions : [],
+          strengths: Array.isArray(aiFinal.strengths) ? aiFinal.strengths : [],
+          sourceType: req.file ? 'upload' : 'resume'
+        });
+
+        resume.history.push({
+          eventType: 'score',
+          title: resume.title || '',
+          template: resume.template || '',
+          thumbnail: resume.thumbnail || '',
+          latexSource: resume.latexSource || '',
+          snapshot: {
+            personalDetails: resume.personalDetails || {},
+            education: resume.education || [],
+            experience: resume.experience || [],
+            skills: resume.skills || [],
+            projects: resume.projects || [],
+            customSections: resume.customSections || [],
+            sectionVisibility: resume.sectionVisibility || {}
+          }
+        });
+
+        if (resume.history.length > 30) {
+          resume.history = resume.history.slice(resume.history.length - 30);
+        }
+        if (resume.scoreHistory.length > 50) {
+          resume.scoreHistory = resume.scoreHistory.slice(resume.scoreHistory.length - 50);
+        }
+        await resume.save();
+      }
     }
 
     res.json({

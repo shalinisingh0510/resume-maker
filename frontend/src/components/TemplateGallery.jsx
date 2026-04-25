@@ -102,20 +102,20 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
             return (
               <div
                 key={tpl._id || tpl.templateId}
-                className={`group relative card p-0 overflow-hidden cursor-pointer transition-all border-2 ${
+                className={`group relative p-0 overflow-hidden cursor-pointer transition-all border rounded-2xl shadow-md hover:shadow-xl ${
                   isSelected ? 'border-primary' : 'border-transparent hover:border-primary/30'
                 }`}
                 onClick={() => !isLocked && onSelect(tpl.templateId)}
               >
-                <div className="relative aspect-[3/4] bg-[var(--bg-secondary)] overflow-hidden">
-                  <div className={`absolute inset-0 ${isLocked ? 'blur-[2px] grayscale opacity-70' : ''}`}>
+                <div className="relative aspect-[4/5] bg-white overflow-hidden">
+                  <div className={`absolute inset-0 ${isLocked ? 'blur-[1.5px] grayscale opacity-70' : ''}`}>
                     <div className="absolute inset-0 flex items-start justify-center">
                       <div
                         className="pointer-events-none"
                         style={{
                           width: '800px',
                           height: '1122px',
-                          transform: 'scale(0.38)',
+                          transform: 'scale(0.56)',
                           transformOrigin: 'top center'
                         }}
                       >

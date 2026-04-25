@@ -63,6 +63,15 @@ const initialResumeState = {
   ],
   skills: [{ category: '', items: [] }],
   projects: [{ name: '', description: '', technologies: [], link: '', startDate: '', endDate: '' }],
+  customSections: [],
+  sectionVisibility: {
+    summary: true,
+    experience: true,
+    education: true,
+    skills: true,
+    projects: true,
+    customSections: true
+  },
   latexSource: '',
   isLatexResume: false,
   thumbnail: ''
@@ -82,6 +91,7 @@ const ResumeBuilder = () => {
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [latexCompiling, setLatexCompiling] = useState(false);
   const [latexCompiledHtml, setLatexCompiledHtml] = useState('');
@@ -385,6 +395,83 @@ const ResumeBuilder = () => {
       .map((s) => s.trim())
       .filter(Boolean);
     handleArrayFieldChange('projects', projIndex, 'technologies', itemsArray);
+  };
+
+  const handleSectionVisibilityChange = (sectionKey, checked) => {
+    setResume((prev) => ({
+      ...prev,
+      sectionVisibility: {
+        ...prev.sectionVisibility,
+        [sectionKey]: checked
+      }
+    }));
+  };
+
+  const addCustomSection = () => {
+    setResume((prev) => ({
+      ...prev,
+      customSections: [...(prev.customSections || []), { title: '', content: '', items: [] }]
+    }));
+  };
+
+  const removeCustomSection = (index) => {
+    setResume((prev) => {
+      const next = [...(prev.customSections || [])];
+      next.splice(index, 1);
+      return { ...prev, customSections: next };
+    });
+  };
+
+  const handleCustomSectionChange = (index, key, value) => {
+    setResume((prev) => {
+      const next = [...(prev.customSections || [])];
+      const current = next[index] || { title: '', content: '', items: [] };
+      if (key === 'items') {
+        current.items = value
+          .split('\n')
+          .map((v) => v.trim())
+          .filter(Boolean);
+      } else {
+        current[key] = value;
+      }
+      next[index] = current;
+      return { ...prev, customSections: next };
+    });
+  };
+
+  const handleImportResumeFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const name = (file.name || '').toLowerCase();
+    if (!name.endsWith('.pdf') && !name.endsWith('.txt')) {
+      toast.error('Only PDF or TXT import is supported.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('resumeFile', file);
+    formData.append('template', resume.template);
+
+    setImporting(true);
+    try {
+      const res = await resumeAPI.importFromFile(formData);
+      const imported = res?.data?.data;
+      if (!imported) throw new Error('Invalid import response');
+
+      setResume((prev) => ({
+        ...prev,
+        ...imported,
+        template: prev.template
+      }));
+      setActiveTab('personal');
+      toast.success('Resume imported and mapped to editable sections.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to import resume file.');
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
   };
 
   if (loading || loadingTemplates) {
@@ -757,11 +844,91 @@ const ResumeBuilder = () => {
                     <HiDownload /> {downloading ? 'Preparing...' : 'Download PDF'}
                   </button>
                 </div>
-                <div className="card">
-                  <h3 className="font-bold mb-2">Future LaTeX Workflow</h3>
+
+                <div className="card space-y-4">
+                  <h3 className="font-bold">Import Existing Resume (PDF/TXT)</h3>
                   <p className="text-xs text-[var(--text-muted)]">
-                    This resume now stores `latexSource`, `isLatexResume`, and snapshot history, so a LaTeX editor/compiler feature can be added without changing your saved data model.
+                    Upload your existing resume and we will map its structure into editable sections for this selected template.
                   </p>
+                  <label className="btn btn-secondary w-full cursor-pointer">
+                    {importing ? 'Importing...' : 'Upload and Auto-Fit Resume'}
+                    <input
+                      type="file"
+                      accept=".pdf,.txt"
+                      className="hidden"
+                      onChange={handleImportResumeFile}
+                      disabled={importing}
+                    />
+                  </label>
+                </div>
+
+                <div className="card space-y-4">
+                  <h3 className="font-bold">Section Manager</h3>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Turn sections on/off for any template and add custom sections dynamically.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    {[
+                      ['summary', 'Summary'],
+                      ['experience', 'Experience'],
+                      ['education', 'Education'],
+                      ['skills', 'Skills'],
+                      ['projects', 'Projects'],
+                      ['customSections', 'Custom Sections']
+                    ].map(([key, label]) => (
+                      <label key={key} className="flex items-center justify-between rounded-lg border border-[var(--border-color)] px-3 py-2">
+                        <span>{label}</span>
+                        <input
+                          type="checkbox"
+                          checked={resume.sectionVisibility?.[key] !== false}
+                          onChange={(e) => handleSectionVisibilityChange(key, e.target.checked)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 border-t border-[var(--border-color)]">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-sm">Custom Sections</h4>
+                      <button className="btn btn-secondary btn-sm" onClick={addCustomSection}>
+                        <HiPlus className="w-4 h-4" /> Add Section
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {(resume.customSections || []).map((section, index) => (
+                        <div key={index} className="rounded-lg border border-[var(--border-color)] p-3 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <input
+                              type="text"
+                              className="input"
+                              placeholder="Section title"
+                              value={section.title || ''}
+                              onChange={(e) => handleCustomSectionChange(index, 'title', e.target.value)}
+                            />
+                            <button className="btn btn-ghost text-red-400" onClick={() => removeCustomSection(index)}>
+                              <HiTrash />
+                            </button>
+                          </div>
+                          <textarea
+                            className="input h-20"
+                            placeholder="Section overview"
+                            value={section.content || ''}
+                            onChange={(e) => handleCustomSectionChange(index, 'content', e.target.value)}
+                          />
+                          <textarea
+                            className="input h-20"
+                            placeholder="Bullet items (one per line)"
+                            value={(section.items || []).join('\n')}
+                            onChange={(e) => handleCustomSectionChange(index, 'items', e.target.value)}
+                          />
+                        </div>
+                      ))}
+                      {(resume.customSections || []).length === 0 ? (
+                        <p className="text-xs text-[var(--text-muted)]">No custom sections added.</p>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

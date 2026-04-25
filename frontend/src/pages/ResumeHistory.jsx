@@ -89,6 +89,7 @@ const ResumeHistory = () => {
                 {resumes.map((resume) => {
                   const history = resume.history || [];
                   const downloads = history.filter((entry) => entry.eventType === 'download').length;
+                  const scores = (resume.scoreHistory || []).length;
                   const lastEvent = history.length ? history[history.length - 1] : null;
 
                   return (
@@ -113,6 +114,7 @@ const ResumeHistory = () => {
                       <td className="p-5 text-sm text-[var(--text-secondary)]">
                         <div>Total: {history.length}</div>
                         <div>Downloads: {downloads}</div>
+                        <div>Scores: {scores}</div>
                         <div>Last: {lastEvent?.eventType || 'none'}</div>
                       </td>
                       <td className="p-5 text-sm text-[var(--text-secondary)] font-medium">
