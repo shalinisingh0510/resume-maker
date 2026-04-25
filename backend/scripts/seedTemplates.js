@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const Template = require('../models/Template');
 
-dotenv.config({ path: '../.env' });
+dotenv.config({ path: './backend/.env' });
 
 const templates = [
   // ==================== PROFESSIONAL ====================
@@ -79,7 +79,7 @@ for (let i = 1; i <= 10; i++) {
 
 const seedDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27012/resume-maker');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27012/resume-maker');
     console.log('Connected to DB for seeding...');
     
     // Clear existing
