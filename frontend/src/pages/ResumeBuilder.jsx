@@ -1,14 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { resumeAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import ResumePreview from '../components/ResumePreview';
+import TemplateGallery from '../components/TemplateGallery';
 import html2pdf from 'html2pdf.js';
-import { HiSave, HiDownload, HiArrowLeft, HiUser, HiBriefcase, HiAcademicCap, HiLightningBolt, HiCode, HiCog, HiTrash, HiPlus } from 'react-icons/hi';
+import { 
+  HiSave, HiDownload, HiArrowLeft, HiUser, HiBriefcase, 
+  HiAcademicCap, HiLightningBolt, HiCode, HiCog, HiTrash, 
+  HiPlus, HiViewGrid, HiSparkles 
+} from 'react-icons/hi';
 
 const initialResumeState = {
   title: 'Untitled Resume',
-  template: 'clean',
+  template: 'prof-1',
   personalDetails: { fullName: '', email: '', phone: '', location: '', linkedin: '', github: '', website: '', summary: '' },
   education: [{ institution: '', degree: '', fieldOfStudy: '', startDate: '', endDate: '', gpa: '', description: '' }],
   experience: [{ company: '', position: '', location: '', startDate: '', endDate: '', current: false, description: '', highlights: [''] }],
@@ -20,6 +26,7 @@ const initialResumeState = {
 
 const ResumeBuilder = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [resume, setResume] = useState(initialResumeState);
   const [loading, setLoading] = useState(id ? true : false);
@@ -29,11 +36,13 @@ const ResumeBuilder = () => {
   const previewRef = useRef(null);
 
   const tabs = [
+    { id: 'templates', label: 'Templates', icon: <HiViewGrid /> },
     { id: 'personal', label: 'Personal', icon: <HiUser /> },
     { id: 'experience', label: 'Experience', icon: <HiBriefcase /> },
     { id: 'education', label: 'Education', icon: <HiAcademicCap /> },
     { id: 'skills', label: 'Skills', icon: <HiCode /> },
     { id: 'projects', label: 'Projects', icon: <HiLightningBolt /> },
+    { id: 'ai', label: 'AI Score', icon: <HiSparkles /> },
     { id: 'settings', label: 'Settings', icon: <HiCog /> },
   ];
 
@@ -68,7 +77,7 @@ const ResumeBuilder = () => {
       }
     } catch (error) {
       if (error.response?.data?.limitReached) {
-        toast.error(error.response.data.message, { duration: 5000 });
+        toast.error(error.response.data.message);
         navigate('/pricing');
       } else {
         toast.error('Failed to save resume');
@@ -162,7 +171,11 @@ const ResumeBuilder = () => {
               placeholder="Resume Title"
             />
           </div>
-          <button className="btn btn-primary gap-2 h-10 px-4 text-xs" onClick={handleSave} disabled={saving}>
+          <button 
+            className="btn btn-primary gap-2 h-10 px-4 text-xs" 
+            onClick={handleSave} 
+            disabled={saving || (resume.template?.includes('prof-') && parseInt(resume.template.split('-')[1]) > 5 && user?.subscriptionType === 'free')}
+          >
             {saving ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <HiSave className="w-4 h-4" />} 
             Save
           </button>
@@ -191,8 +204,16 @@ const ResumeBuilder = () => {
           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-[var(--bg-primary)]">
             <h2 className="text-xl font-bold mb-6 capitalize flex items-center gap-2">
                {tabs.find(t => t.id === activeTab)?.icon}
-               {activeTab} Details
+               {activeTab} {activeTab === 'ai' ? 'Analysis' : 'Details'}
             </h2>
+
+            {/* TEMPLATE GALLERY */}
+            {activeTab === 'templates' && (
+              <TemplateGallery 
+                selectedTemplate={resume.template} 
+                onSelect={(id) => setResume({...resume, template: id})} 
+              />
+            )}
 
             {/* PERSONAL DETAILS */}
             {activeTab === 'personal' && (
@@ -222,7 +243,9 @@ const ResumeBuilder = () => {
               </div>
             )}
 
-            {/* EXPERIENCE */}
+            {/* EXPERIENCE, EDUCATION, SKILLS, PROJECTS (existing logic remains) */}
+            {/* ... simplified for brevity here but kept in full file ... */}
+            
             {activeTab === 'experience' && (
               <div className="space-y-6 animate-fadeIn">
                 {resume.experience.map((exp, index) => (
@@ -265,7 +288,6 @@ const ResumeBuilder = () => {
               </div>
             )}
 
-            {/* EDUCATION */}
             {activeTab === 'education' && (
               <div className="space-y-6 animate-fadeIn">
                 {resume.education.map((edu, index) => (
@@ -295,7 +317,6 @@ const ResumeBuilder = () => {
               </div>
             )}
 
-            {/* SKILLS */}
             {activeTab === 'skills' && (
               <div className="space-y-6 animate-fadeIn">
                 {resume.skills.map((skill, index) => (
@@ -321,8 +342,7 @@ const ResumeBuilder = () => {
               </div>
             )}
 
-             {/* PROJECTS */}
-             {activeTab === 'projects' && (
+            {activeTab === 'projects' && (
               <div className="space-y-6 animate-fadeIn">
                 {resume.projects.map((proj, index) => (
                   <div key={index} className="card relative group">
@@ -347,26 +367,33 @@ const ResumeBuilder = () => {
               </div>
             )}
 
-            {/* SETTINGS */}
+            {activeTab === 'ai' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="card text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <HiSparkles className="text-primary text-3xl" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">AI Optimization</h3>
+                  <p className="text-sm text-[var(--text-muted)] mb-6 max-w-xs mx-auto">
+                    Get an instant ATS score and professional improvement suggestions for this resume.
+                  </p>
+                  <button 
+                    className="btn btn-primary w-full"
+                    onClick={() => navigate('/ai-tools')}
+                  >
+                    Analyze with AI Tools
+                  </button>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'settings' && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="card">
-                   <h3 className="font-bold mb-4">Resume Template</h3>
-                   <div className="grid grid-cols-2 gap-3">
-                      {['clean', 'professional', 'modern'].map(tpl => (
-                        <button 
-                          key={tpl} 
-                          onClick={() => setResume({...resume, template: tpl})}
-                          className={`p-4 rounded-xl border text-sm font-bold capitalize transition-all ${
-                            resume.template === tpl 
-                            ? 'bg-primary/10 border-primary text-primary shadow-sm' 
-                            : 'bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-muted)] hover:border-primary/50'
-                          }`}
-                        >
-                          {tpl}
-                        </button>
-                      ))}
-                   </div>
+                   <h3 className="font-bold mb-4">Export Options</h3>
+                   <button className="btn btn-secondary w-full gap-2" onClick={handleDownloadPDF}>
+                      <HiDownload /> Download PDF
+                   </button>
                 </div>
               </div>
             )}
@@ -381,13 +408,29 @@ const ResumeBuilder = () => {
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             Live Preview
           </h2>
-          <button className="btn btn-primary btn-sm gap-2" onClick={handleDownloadPDF}>
-            <HiDownload className="w-4 h-4" /> Download PDF
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              className="btn btn-primary btn-sm gap-2" 
+              onClick={handleDownloadPDF}
+              disabled={resume.template?.includes('prof-') && parseInt(resume.template.split('-')[1]) > 5 && user?.subscriptionType === 'free'}
+            >
+              <HiDownload className="w-4 h-4" /> Download PDF
+            </button>
+          </div>
         </div>
         
         {/* PDF Viewport Area */}
-        <div className="flex-1 overflow-auto p-4 md:p-12 flex justify-center custom-scrollbar bg-[var(--bg-secondary)]">
+        <div className="flex-1 overflow-auto p-4 md:p-12 flex justify-center custom-scrollbar bg-[var(--bg-secondary)] relative">
+          {resume.template?.includes('prof-') && parseInt(resume.template.split('-')[1]) > 5 && user?.subscriptionType === 'free' && (
+             <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--bg-secondary)]/80 backdrop-blur-sm">
+                <div className="card text-center p-8 max-w-sm">
+                  <HiLockClosed className="text-4xl text-primary mx-auto mb-4" />
+                  <h3 className="text-lg font-bold mb-2">Premium Template</h3>
+                  <p className="text-sm text-[var(--text-muted)] mb-4">Upgrade to PRO to use this template and unlock all features.</p>
+                  <button className="btn btn-primary w-full" onClick={() => navigate('/pricing')}>Upgrade Now</button>
+                </div>
+             </div>
+          )}
           <div className="w-full max-w-[800px] shadow-2xl origin-top transition-transform">
             <ResumePreview ref={previewRef} resume={resume} template={resume.template} />
           </div>
