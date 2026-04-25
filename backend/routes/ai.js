@@ -10,7 +10,10 @@ const { extractTextFromPdf } = require('../utils/pdfExtractor');
 const router = express.Router();
 
 // Initialize Groq client
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq = null;
+if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== 'your_groq_api_key_here') {
+  groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
 
 // Multer config - increased limits and better handling
 const storage = multer.memoryStorage();
@@ -101,7 +104,46 @@ const cleanAIResponse = (content) => {
 // POST /api/ai/enhance - AI Resume Enhancement
 router.post('/enhance', protect, checkAILimit, async (req, res) => {
   try {
-    const { resumeId } = req.body || {};
+    const { resumeId, type, content, prompt } = req.body || {};
+    
+    // Handle LaTeX enhancement
+    if (type === 'latex') {
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ message: 'LaTeX content is required for enhancement.' });
+      }
+
+      const latexPrompt = prompt || `You are a LaTeX expert and resume consultant. Analyze and enhance this LaTeX resume code.
+      
+Your task:
+1. Fix any syntax errors or compilation issues
+2. Improve formatting and layout for better readability
+3. Suggest better LaTeX commands or packages
+4. Ensure professional resume structure
+5. Add comments for complex sections if needed
+
+Return ONLY the enhanced LaTeX code without any explanations or markdown formatting. The code should be ready to compile.`;
+
+      const completion = await groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: latexPrompt },
+          { role: 'user', content: content }
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.3,
+        max_tokens: 4000,
+      });
+
+      const enhancedLatex = completion.choices[0].message.content.trim();
+      await User.findByIdAndUpdate(req.user._id, { $inc: { aiUsageCount: 1 } });
+
+      return res.json({ 
+        success: true, 
+        data: { enhanced: enhancedLatex },
+        aiUsageCount: (req.user.aiUsageCount || 0) + 1 
+      });
+    }
+
+    // Handle regular resume enhancement
     if (!resumeId || resumeId === 'undefined') {
       return res.status(400).json({
         message: 'Select one of your saved resumes to use AI enhancement.'
@@ -125,8 +167,7 @@ router.post('/enhance', protect, checkAILimit, async (req, res) => {
       ],
       model: 'llama-3.3-70b-versatile',
       temperature: 0.7,
-      max_tokens: 2000,
-      response_format: { type: 'json_object' }
+      max_tokens: 3000,
     });
 
     const aiResponse = cleanAIResponse(completion.choices[0].message.content);
@@ -149,16 +190,7 @@ router.post('/enhance', protect, checkAILimit, async (req, res) => {
       title: resume.title || '',
       template: resume.template || '',
       thumbnail: resume.thumbnail || '',
-      latexSource: resume.latexSource || '',
-      snapshot: {
-        personalDetails: resume.personalDetails || {},
-        education: resume.education || [],
-        experience: resume.experience || [],
-        skills: resume.skills || [],
-        projects: resume.projects || [],
-        customSections: resume.customSections || [],
-        sectionVisibility: resume.sectionVisibility || {}
-      }
+      timestamp: new Date().toISOString(),
     });
 
     if (resume.history.length > 30) {

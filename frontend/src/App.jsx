@@ -10,6 +10,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import ResumeBuilder from './pages/ResumeBuilder';
 import ResumeHistory from './pages/ResumeHistory';
+import LatexEditorPage from './pages/LatexEditorPage';
 import AITools from './pages/AITools';
 import Pricing from './pages/Pricing';
 import './index.css';
@@ -53,6 +54,8 @@ function AppLayout() {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/builder" element={<ProtectedRoute><ResumeBuilder /></ProtectedRoute>} />
           <Route path="/builder/:id" element={<ProtectedRoute><ResumeBuilder /></ProtectedRoute>} />
+          <Route path="/latex-editor" element={<ProtectedRoute><LatexEditorPage /></ProtectedRoute>} />
+          <Route path="/latex-editor/:id" element={<ProtectedRoute><LatexEditorPage /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><ResumeHistory /></ProtectedRoute>} />
           <Route path="/ai-tools" element={<ProtectedRoute><AITools /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />

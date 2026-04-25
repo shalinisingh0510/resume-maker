@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { resumeAPI } from '../services/api';
-import { HiPlus, HiDocumentText, HiLightningBolt, HiStar, HiTrash, HiPencilAlt } from 'react-icons/hi';
+import { HiPlus, HiDocumentText, HiLightningBolt, HiStar, HiTrash, HiPencilAlt, HiCode } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -58,9 +58,14 @@ const Dashboard = () => {
           <p className="text-[var(--text-secondary)]">Manage your resumes, downloads, and AI optimizations.</p>
         </div>
 
-        <Link to="/builder" className="btn btn-primary gap-2 h-12 px-6">
-          <HiPlus className="w-5 h-5" /> Create New Resume
-        </Link>
+        <div className="flex gap-3">
+          <Link to="/latex-editor" className="btn btn-secondary gap-2 h-12 px-6">
+            <HiCode className="w-5 h-5" /> LaTeX Editor
+          </Link>
+          <Link to="/builder" className="btn btn-primary gap-2 h-12 px-6">
+            <HiPlus className="w-5 h-5" /> Create New Resume
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
