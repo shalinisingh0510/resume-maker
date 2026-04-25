@@ -42,11 +42,13 @@ export const resumeAPI = {
   getAll: () => api.get('/resumes'),
   getOne: (id) => api.get(`/resume/${id}`),
   update: (id, data) => api.put(`/resume/${id}`, data),
-  delete: (id) => api.delete(`/resume/${id}`)
+  delete: (id) => api.delete(`/resume/${id}`),
+  getHistory: (id) => api.get(`/resume/${id}/history`),
+  createHistoryEvent: (id, data) => api.post(`/resume/${id}/history-event`, data)
 };
 
 export const templateAPI = {
-  getAll: (category) => api.get('/templates', { params: { category } }),
+  getAll: (category, q) => api.get('/templates', { params: { category, q } }),
   getOne: (id) => api.get(`/templates/${id}`),
 };
 

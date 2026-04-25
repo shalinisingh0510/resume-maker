@@ -1,283 +1,485 @@
 import { forwardRef } from 'react';
 
-/**
- * SOLID PRINCIPLE: Strategy Pattern for Template Rendering
- */
-
-const LAYOUT_STRATEGIES = {
-  // --- JAKE'S RESUME (Traditional LaTeX / Overleaf style) ---
-  'overleaf-jake': (p, exp, edu, skills, proj) => (
-    <div className="font-serif text-[11pt] text-[#000] leading-tight">
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-bold uppercase mb-1">{p.fullName || 'YOUR NAME'}</h1>
-        <div className="text-[10pt] flex justify-center gap-2 text-gray-700">
-          <span>{p.phone}</span> | <span>{p.email}</span> | <span>{p.location}</span>
-          {p.linkedin && <span> | {p.linkedin}</span>}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {/* Education */}
-        <section>
-          <h2 className="text-[12pt] font-bold uppercase border-b border-black mb-2">Education</h2>
-          {edu.map((item, idx) => (
-            <div key={idx} className="mb-2">
-              <div className="flex justify-between font-bold">
-                <span>{item.institution}</span>
-                <span>{item.location || 'Remote'}</span>
-              </div>
-              <div className="flex justify-between italic">
-                <span>{item.degree} in {item.fieldOfStudy}</span>
-                <span>{item.startDate} – {item.endDate}</span>
-              </div>
-            </div>
-          ))}
-        </section>
-
-        {/* Experience */}
-        <section>
-          <h2 className="text-[12pt] font-bold uppercase border-b border-black mb-2">Experience</h2>
-          {exp.map((item, idx) => (
-            <div key={idx} className="mb-3">
-              <div className="flex justify-between font-bold">
-                <span>{item.position}</span>
-                <span>{item.startDate} – {item.endDate}</span>
-              </div>
-              <div className="flex justify-between italic mb-1">
-                <span>{item.company}</span>
-                <span>{item.location || ''}</span>
-              </div>
-              <ul className="list-disc ml-5 space-y-0.5 text-[10pt]">
-                {item.highlights?.map((h, i) => <li key={i}>{h}</li>)}
-              </ul>
-            </div>
-          ))}
-        </section>
-
-        {/* Projects */}
-        <section>
-          <h2 className="text-[12pt] font-bold uppercase border-b border-black mb-2">Projects</h2>
-          {proj.map((item, idx) => (
-            <div key={idx} className="mb-2">
-              <div className="flex justify-between">
-                <span className="font-bold">{item.name}</span>
-                <span className="italic">{item.startDate} – {item.endDate}</span>
-              </div>
-              <p className="text-[10pt]">{item.description}</p>
-            </div>
-          ))}
-        </section>
-
-        {/* Skills */}
-        <section>
-          <h2 className="text-[12pt] font-bold uppercase border-b border-black mb-2">Technical Skills</h2>
-          <div className="space-y-1 text-[10pt]">
-            {skills.map((s, idx) => (
-              <div key={idx}>
-                <span className="font-bold">{s.category}:</span> {s.items.join(', ')}
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </div>
-  ),
-
-  // --- DEEDY CV (Famous Two-Column LaTeX style) ---
-  'overleaf-deedy': (p, exp, edu, skills, proj) => (
-    <div className="flex gap-6 font-sans text-[#333]">
-      {/* Column 1 (Education, Links, Skills) */}
-      <div className="w-1/3">
-        <h1 className="text-4xl font-light tracking-tighter mb-1 text-black">{p.fullName?.split(' ')[0] || 'FIRST'}</h1>
-        <h1 className="text-4xl font-bold tracking-tighter mb-6 text-black">{p.fullName?.split(' ')[1] || 'LAST'}</h1>
-        
-        <div className="space-y-6">
-          <section>
-            <h2 className="text-lg font-bold uppercase tracking-widest border-b border-gray-300 mb-3 text-red-700">Education</h2>
-            {edu.map((item, idx) => (
-              <div key={idx} className="mb-4">
-                <h3 className="font-bold text-sm">{item.institution}</h3>
-                <p className="text-xs">{item.degree}</p>
-                <p className="text-xs text-gray-500">Graduated {item.endDate}</p>
-                {item.gpa && <p className="text-xs">GPA: {item.gpa}</p>}
-              </div>
-            ))}
-          </section>
-
-          <section>
-            <h2 className="text-lg font-bold uppercase tracking-widest border-b border-gray-300 mb-3 text-red-700">Skills</h2>
-            {skills.map((s, idx) => (
-              <div key={idx} className="mb-3">
-                <h3 className="font-bold text-[10px] uppercase text-gray-500">{s.category}</h3>
-                <p className="text-xs leading-relaxed">{s.items.join(' \u2022 ')}</p>
-              </div>
-            ))}
-          </section>
-        </div>
-      </div>
-
-      {/* Column 2 (Experience, Projects) */}
-      <div className="w-2/3 border-l border-gray-200 pl-6">
-        <div className="text-right text-[10px] text-gray-400 uppercase font-bold tracking-widest mb-8">
-          {p.email} | {p.phone} | {p.location}
-        </div>
-
-        <section className="mb-8">
-          <h2 className="text-lg font-bold uppercase tracking-widest border-b border-gray-300 mb-4 text-red-700">Experience</h2>
-          {exp.map((item, idx) => (
-            <div key={idx} className="mb-6">
-              <h3 className="font-bold text-sm uppercase">{item.position}</h3>
-              <div className="flex justify-between text-xs font-bold text-gray-500 mb-2">
-                <span>{item.company}</span>
-                <span>{item.startDate} – {item.endDate}</span>
-              </div>
-              <ul className="list-disc ml-5 space-y-1">
-                {item.highlights?.map((h, i) => <li key={i} className="text-[11px] text-gray-600 leading-snug">{h}</li>)}
-              </ul>
-            </div>
-          ))}
-        </section>
-
-        <section>
-          <h2 className="text-lg font-bold uppercase tracking-widest border-b border-gray-300 mb-4 text-red-700">Projects</h2>
-          {proj.map((item, idx) => (
-            <div key={idx} className="mb-4">
-              <h3 className="font-bold text-sm uppercase">{item.name}</h3>
-              <p className="text-[11px] text-gray-600 leading-snug mt-1">{item.description}</p>
-            </div>
-          ))}
-        </section>
-      </div>
-    </div>
-  ),
-
-  'overleaf-modern': (p, exp, edu, skills, proj, primaryColor) => (
-    <div className="font-sans text-[#444] leading-relaxed">
-      <header className="mb-10 text-center">
-        <h1 className="text-4xl font-extrabold uppercase tracking-widest mb-2" style={{ color: primaryColor }}>{p.fullName || 'YOUR NAME'}</h1>
-        <div className="flex justify-center gap-4 text-xs text-gray-500 font-bold uppercase tracking-wider">
-          <span>{p.email}</span> | <span>{p.phone}</span> | <span>{p.location}</span>
-        </div>
-      </header>
-
-      <section className="mb-10">
-        <h2 className="text-sm font-black uppercase tracking-[0.2em] mb-4 pb-2 border-b-2" style={{ color: primaryColor, borderColor: primaryColor }}>Experience</h2>
-        <div className="space-y-8">
-          {exp.map((item, idx) => (
-            <div key={idx}>
-              <div className="flex justify-between items-baseline mb-1">
-                <h3 className="font-bold text-base text-gray-800">{item.position}</h3>
-                <span className="text-xs font-bold text-gray-400">{item.startDate} – {item.endDate}</span>
-              </div>
-              <p className="text-sm font-bold mb-3" style={{ color: primaryColor }}>{item.company}</p>
-              <ul className="list-disc ml-5 space-y-1.5">
-                {item.highlights?.map((h, i) => <li key={i} className="text-[11px] leading-relaxed">{h}</li>)}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-sm font-black uppercase tracking-[0.2em] mb-4 pb-2 border-b-2" style={{ color: primaryColor, borderColor: primaryColor }}>Education</h2>
-        {edu.map((item, idx) => (
-          <div key={idx} className="mb-4">
-            <div className="flex justify-between font-bold text-sm">
-              <span>{item.institution}</span>
-              <span className="text-gray-400">{item.endDate}</span>
-            </div>
-            <p className="text-xs italic">{item.degree} in {item.fieldOfStudy}</p>
-          </div>
-        ))}
-      </section>
-    </div>
-  ),
-
-  // Fallback / Professional
-  professional: (p, exp, edu, skills, proj, primaryColor) => (
-    <div className="font-serif">
-      <header className="bg-slate-50 p-8 -mx-8 -mt-8 mb-8 border-b-4" style={{ borderBottomColor: primaryColor }}>
-        <h1 className="text-4xl font-bold tracking-tight" style={{ color: primaryColor }}>{p.fullName || 'YOUR NAME'}</h1>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-3 text-slate-600">
-          <span>{p.email}</span> • <span>{p.phone}</span> • <span>{p.location}</span>
-        </div>
-        {p.summary && <p className="text-xs mt-4 text-slate-700 leading-relaxed">{p.summary}</p>}
-      </header>
-      <div className="space-y-8">
-        <section>
-          <h2 className="text-lg font-bold uppercase tracking-widest mb-4 border-b-2 pb-1" style={{ color: primaryColor, borderColor: primaryColor }}>Experience</h2>
-          {exp.map((item, idx) => (
-            <div key={idx} className="mb-4">
-              <div className="flex justify-between font-bold text-sm">
-                <span>{item.position}</span>
-                <span>{item.startDate} - {item.endDate}</span>
-              </div>
-              <p className="text-xs italic text-slate-500">{item.company}</p>
-              <ul className="list-disc ml-5 mt-2 space-y-1">
-                {item.highlights?.map((h, i) => <li key={i} className="text-[11px] text-slate-600">{h}</li>)}
-              </ul>
-            </div>
-          ))}
-        </section>
-      </div>
-    </div>
-  ),
-
-  student: (p, exp, edu, skills, proj, primaryColor) => (
-    <div className="font-sans">
-      <header className="mb-8 border-l-8 pl-6" style={{ borderLeftColor: primaryColor }}>
-        <h1 className="text-3xl font-bold" style={{ color: primaryColor }}>{p.fullName || 'YOUR NAME'}</h1>
-        <p className="text-xs text-slate-500">{p.email} | {p.phone} | {p.location}</p>
-      </header>
-      <section>
-        <h2 className="text-lg font-bold mb-4 border-b pb-1" style={{ color: primaryColor, borderColor: primaryColor }}>Education</h2>
-        {edu.map((item, idx) => (
-          <div key={idx} className="mb-3">
-            <h3 className="font-bold text-sm">{item.institution}</h3>
-            <p className="text-xs">{item.degree} • {item.endDate}</p>
-          </div>
-        ))}
-      </section>
-    </div>
-  )
+const templateAliases = {
+  'overleaf-jake': 'jake',
+  'overleaf-jake-anon': 'jake',
+  'overleaf-deedy': 'deedy',
+  'overleaf-modern-deedy': 'modern',
+  'overleaf-single-column-deedy': 'minimal',
+  'overleaf-moderncv': 'modern',
+  'builder-novoresume-classic': 'classic',
+  'builder-resumeio-modern': 'modern',
+  'builder-zety-cascade': 'classic',
+  'builder-kickresume-creative': 'deedy',
+  'builder-canva-bold': 'modern',
+  'student-grad-entry': 'student',
+  'student-research-academic': 'student',
+  'minimal-ats-clean': 'minimal',
+  'minimal-mono-pro': 'minimal',
+  'professional-executive-pro': 'classic',
+  'professional-compact-lite': 'classic'
 };
 
-const ResumePreview = forwardRef(({ resume, template = 'overleaf-jake' }, ref) => {
-  const p = resume.personalDetails || {};
-  const edu = resume.education || [];
-  const exp = resume.experience || [];
-  const skills = resume.skills || [];
-  const proj = resume.projects || [];
+const getLayoutKey = (templateId = '') => {
+  if (templateAliases[templateId]) return templateAliases[templateId];
 
-  // Determine which strategy to use
-  // We check if we have a direct match for the templateId
-  let renderStrategy = LAYOUT_STRATEGIES[template];
-  let primaryColor = '#1e293b';
+  if (templateId.includes('student')) return 'student';
+  if (templateId.includes('minimal')) return 'minimal';
+  if (templateId.includes('creative')) return 'deedy';
+  return 'classic';
+};
 
-  // Fallback if direct ID doesn't exist (handle generic categories)
-  if (!renderStrategy) {
-    const category = template.split('-')[0]; // prof, stud, creat, min
-    const categoryMap = { prof: 'professional', stud: 'student', creat: 'creative', min: 'minimal' };
-    const strategyKey = categoryMap[category] || 'professional';
-    renderStrategy = LAYOUT_STRATEGIES[strategyKey];
+const formatRange = (startDate, endDate, current) => {
+  if (current) return `${startDate || ''} - Present`;
+  if (!startDate && !endDate) return '';
+  return `${startDate || ''} - ${endDate || ''}`.trim();
+};
 
-    // Color palettes for generic templates
-    const palettes = {
-      prof: ['#1e293b', '#1e3a8a', '#334155'],
-      stud: ['#2563eb', '#059669', '#7c3aed'],
-      creat: ['#f43f5e', '#8b5cf6', '#06b6d4'],
-    };
-    const variant = parseInt(template.split('-')[1]) || 1;
-    primaryColor = palettes[category]?.[(variant - 1) % 3] || '#1e293b';
+const SectionHeader = ({ title, accent = '#1e293b' }) => (
+  <h2
+    className="text-[13px] font-bold uppercase tracking-[0.18em] border-b pb-1 mb-2"
+    style={{ color: accent, borderColor: accent }}
+  >
+    {title}
+  </h2>
+);
+
+const renderClassic = ({ p, exp, edu, skills, proj, accent }) => (
+  <div className="font-serif text-[#111827]">
+    <header className="mb-6">
+      <h1 className="text-[33px] font-bold leading-tight">{p.fullName || 'Your Name'}</h1>
+      <p className="text-[11px] text-gray-700">
+        {[p.email, p.phone, p.location, p.linkedin].filter(Boolean).join(' | ')}
+      </p>
+      {p.summary && <p className="text-[11px] text-gray-700 mt-2 leading-relaxed">{p.summary}</p>}
+    </header>
+
+    <section className="mb-4">
+      <SectionHeader title="Experience" accent={accent} />
+      {exp.map((item, idx) => (
+        <div key={idx} className="mb-3">
+          <div className="flex justify-between text-[12px] font-bold">
+            <span>{item.position || 'Role Title'}</span>
+            <span>{formatRange(item.startDate, item.endDate, item.current)}</span>
+          </div>
+          <p className="text-[11px] italic text-gray-600">{item.company || 'Company'}</p>
+          <ul className="list-disc ml-5 mt-1 space-y-0.5">
+            {(item.highlights || []).filter(Boolean).map((h, i) => (
+              <li key={i} className="text-[10px] leading-snug text-gray-700">
+                {h}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-4">
+      <SectionHeader title="Education" accent={accent} />
+      {edu.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <div className="flex justify-between text-[12px] font-bold">
+            <span>{item.institution || 'University'}</span>
+            <span>{formatRange(item.startDate, item.endDate)}</span>
+          </div>
+          <p className="text-[11px] text-gray-700">
+            {[item.degree, item.fieldOfStudy].filter(Boolean).join(' in ')}
+          </p>
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-4">
+      <SectionHeader title="Projects" accent={accent} />
+      {proj.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <div className="flex justify-between text-[12px] font-bold">
+            <span>{item.name || 'Project Name'}</span>
+            <span>{formatRange(item.startDate, item.endDate)}</span>
+          </div>
+          <p className="text-[10px] text-gray-700">{item.description}</p>
+        </div>
+      ))}
+    </section>
+
+    <section>
+      <SectionHeader title="Skills" accent={accent} />
+      <div className="space-y-1">
+        {skills.map((s, idx) => (
+          <p key={idx} className="text-[10px] text-gray-700">
+            <span className="font-bold">{s.category}:</span> {(s.items || []).join(', ')}
+          </p>
+        ))}
+      </div>
+    </section>
+  </div>
+);
+
+const renderJake = ({ p, exp, edu, skills, proj }) => (
+  <div className="font-serif text-[11px] text-[#111827] leading-tight">
+    <header className="text-center mb-5">
+      <h1 className="text-[30px] uppercase font-bold mb-1">{p.fullName || 'Your Name'}</h1>
+      <p className="text-[10px] text-gray-600">
+        {[p.phone, p.email, p.location, p.linkedin, p.github].filter(Boolean).join(' | ')}
+      </p>
+    </header>
+
+    <section className="mb-4">
+      <SectionHeader title="Education" accent="#111827" />
+      {edu.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <div className="flex justify-between font-bold text-[11px]">
+            <span>{item.institution || 'University Name'}</span>
+            <span>{item.location || item.endDate || ''}</span>
+          </div>
+          <div className="flex justify-between italic text-[10px] text-gray-700">
+            <span>{[item.degree, item.fieldOfStudy].filter(Boolean).join(' in ')}</span>
+            <span>{formatRange(item.startDate, item.endDate)}</span>
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-4">
+      <SectionHeader title="Experience" accent="#111827" />
+      {exp.map((item, idx) => (
+        <div key={idx} className="mb-3">
+          <div className="flex justify-between font-bold text-[11px]">
+            <span>{item.position || 'Role Title'}</span>
+            <span>{formatRange(item.startDate, item.endDate, item.current)}</span>
+          </div>
+          <div className="flex justify-between italic text-[10px] text-gray-700 mb-1">
+            <span>{item.company || 'Company Name'}</span>
+            <span>{item.location || ''}</span>
+          </div>
+          <ul className="list-disc ml-5 space-y-0.5">
+            {(item.highlights || []).filter(Boolean).map((h, i) => (
+              <li key={i} className="text-[10px]">
+                {h}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-4">
+      <SectionHeader title="Projects" accent="#111827" />
+      {proj.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <div className="flex justify-between text-[11px]">
+            <span className="font-bold">{item.name || 'Project'}</span>
+            <span>{formatRange(item.startDate, item.endDate)}</span>
+          </div>
+          <p className="text-[10px]">{item.description}</p>
+        </div>
+      ))}
+    </section>
+
+    <section>
+      <SectionHeader title="Technical Skills" accent="#111827" />
+      <div className="space-y-1">
+        {skills.map((s, idx) => (
+          <p key={idx} className="text-[10px]">
+            <span className="font-bold">{s.category}:</span> {(s.items || []).join(', ')}
+          </p>
+        ))}
+      </div>
+    </section>
+  </div>
+);
+
+const renderDeedy = ({ p, exp, edu, skills, proj, accent }) => (
+  <div className="flex gap-5 text-[#1f2937] font-sans">
+    <div className="w-[31%] pr-1">
+      <h1 className="text-[24px] font-light tracking-tight leading-none">{(p.fullName || 'First Last').split(' ')[0]}</h1>
+      <h1 className="text-[24px] font-bold tracking-tight mb-4 leading-none">{(p.fullName || 'First Last').split(' ').slice(1).join(' ') || 'Last'}</h1>
+      <p className="text-[9px] text-gray-500 mb-4">{[p.email, p.phone, p.location].filter(Boolean).join(' | ')}</p>
+
+      <section className="mb-4">
+        <SectionHeader title="Education" accent={accent} />
+        {edu.map((item, idx) => (
+          <div key={idx} className="mb-3">
+            <p className="text-[10px] font-bold">{item.institution || 'University'}</p>
+            <p className="text-[9px]">{[item.degree, item.fieldOfStudy].filter(Boolean).join(' in ')}</p>
+            <p className="text-[9px] text-gray-500">{formatRange(item.startDate, item.endDate)}</p>
+          </div>
+        ))}
+      </section>
+
+      <section>
+        <SectionHeader title="Skills" accent={accent} />
+        {skills.map((s, idx) => (
+          <div key={idx} className="mb-2">
+            <p className="text-[9px] font-bold uppercase text-gray-500">{s.category}</p>
+            <p className="text-[9px]">{(s.items || []).join(' • ')}</p>
+          </div>
+        ))}
+      </section>
+    </div>
+
+    <div className="w-[69%] border-l border-gray-200 pl-4">
+      <section className="mb-5">
+        <SectionHeader title="Experience" accent={accent} />
+        {exp.map((item, idx) => (
+          <div key={idx} className="mb-4">
+            <p className="text-[11px] font-bold uppercase">{item.position || 'Role Title'}</p>
+            <div className="flex justify-between text-[9px] font-bold text-gray-500 mb-1">
+              <span>{item.company || 'Company'}</span>
+              <span>{formatRange(item.startDate, item.endDate, item.current)}</span>
+            </div>
+            <ul className="list-disc ml-4 space-y-0.5">
+              {(item.highlights || []).filter(Boolean).map((h, i) => (
+                <li key={i} className="text-[9px] text-gray-700 leading-snug">
+                  {h}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+
+      <section>
+        <SectionHeader title="Projects" accent={accent} />
+        {proj.map((item, idx) => (
+          <div key={idx} className="mb-3">
+            <p className="text-[11px] font-bold uppercase">{item.name || 'Project Name'}</p>
+            <p className="text-[9px] text-gray-700">{item.description}</p>
+          </div>
+        ))}
+      </section>
+    </div>
+  </div>
+);
+
+const renderModern = ({ p, exp, edu, skills, proj, accent }) => (
+  <div className="font-sans text-[#1f2937]">
+    <header className="mb-7 text-center">
+      <h1 className="text-[31px] font-extrabold uppercase tracking-[0.2em]" style={{ color: accent }}>
+        {p.fullName || 'Your Name'}
+      </h1>
+      <p className="text-[10px] text-gray-500 mt-2">{[p.email, p.phone, p.location, p.linkedin].filter(Boolean).join(' | ')}</p>
+      {p.summary && <p className="text-[11px] mt-3 text-gray-700 leading-relaxed">{p.summary}</p>}
+    </header>
+
+    <section className="mb-5">
+      <SectionHeader title="Experience" accent={accent} />
+      {exp.map((item, idx) => (
+        <div key={idx} className="mb-3">
+          <div className="flex justify-between items-baseline mb-0.5">
+            <p className="font-bold text-[12px]">{item.position || 'Role Title'}</p>
+            <span className="text-[9px] font-bold text-gray-500">{formatRange(item.startDate, item.endDate, item.current)}</span>
+          </div>
+          <p className="text-[10px] font-semibold mb-1" style={{ color: accent }}>
+            {item.company || 'Company Name'}
+          </p>
+          <ul className="list-disc ml-5 space-y-0.5">
+            {(item.highlights || []).filter(Boolean).map((h, i) => (
+              <li key={i} className="text-[10px] leading-relaxed">
+                {h}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-5">
+      <SectionHeader title="Projects" accent={accent} />
+      {proj.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <div className="flex justify-between">
+            <p className="text-[12px] font-bold">{item.name || 'Project Name'}</p>
+            <span className="text-[9px] text-gray-500">{formatRange(item.startDate, item.endDate)}</span>
+          </div>
+          <p className="text-[10px]">{item.description}</p>
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-5">
+      <SectionHeader title="Education" accent={accent} />
+      {edu.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <div className="flex justify-between font-bold text-[12px]">
+            <span>{item.institution || 'University Name'}</span>
+            <span className="text-gray-500">{formatRange(item.startDate, item.endDate)}</span>
+          </div>
+          <p className="text-[10px] italic">{[item.degree, item.fieldOfStudy].filter(Boolean).join(' in ')}</p>
+        </div>
+      ))}
+    </section>
+
+    <section>
+      <SectionHeader title="Skills" accent={accent} />
+      {skills.map((s, idx) => (
+        <p key={idx} className="text-[10px] mb-1">
+          <span className="font-bold">{s.category}:</span> {(s.items || []).join(', ')}
+        </p>
+      ))}
+    </section>
+  </div>
+);
+
+const renderMinimal = ({ p, exp, edu, skills, proj }) => (
+  <div className="font-mono text-[#0f172a]">
+    <header className="mb-5 border-b border-gray-900 pb-2">
+      <h1 className="text-[26px] font-bold uppercase tracking-[0.15em]">{p.fullName || 'Your Name'}</h1>
+      <p className="text-[10px] mt-1">{[p.email, p.phone, p.location, p.linkedin].filter(Boolean).join(' | ')}</p>
+    </header>
+
+    <section className="mb-4">
+      <h2 className="text-[11px] font-bold uppercase mb-2">Experience</h2>
+      {exp.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <p className="text-[10px] font-bold">
+            {item.position || 'Role'} @ {item.company || 'Company'}
+          </p>
+          <p className="text-[9px]">{formatRange(item.startDate, item.endDate, item.current)}</p>
+          {(item.highlights || []).filter(Boolean).map((h, i) => (
+            <p key={i} className="text-[9px]">
+              - {h}
+            </p>
+          ))}
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-4">
+      <h2 className="text-[11px] font-bold uppercase mb-2">Education</h2>
+      {edu.map((item, idx) => (
+        <p key={idx} className="text-[9px] mb-1">
+          {item.institution} | {[item.degree, item.fieldOfStudy].filter(Boolean).join(' in ')} | {formatRange(item.startDate, item.endDate)}
+        </p>
+      ))}
+    </section>
+
+    <section className="mb-4">
+      <h2 className="text-[11px] font-bold uppercase mb-2">Projects</h2>
+      {proj.map((item, idx) => (
+        <p key={idx} className="text-[9px] mb-1">
+          <span className="font-bold">{item.name}:</span> {item.description}
+        </p>
+      ))}
+    </section>
+
+    <section>
+      <h2 className="text-[11px] font-bold uppercase mb-2">Skills</h2>
+      {skills.map((s, idx) => (
+        <p key={idx} className="text-[9px] mb-1">
+          <span className="font-bold">{s.category}:</span> {(s.items || []).join(', ')}
+        </p>
+      ))}
+    </section>
+  </div>
+);
+
+const renderStudent = ({ p, exp, edu, skills, proj, accent }) => (
+  <div className="font-sans text-[#0f172a]">
+    <header className="mb-6 border-l-4 pl-4" style={{ borderColor: accent }}>
+      <h1 className="text-[29px] font-bold" style={{ color: accent }}>
+        {p.fullName || 'Your Name'}
+      </h1>
+      <p className="text-[10px] text-gray-600">{[p.email, p.phone, p.location].filter(Boolean).join(' | ')}</p>
+      {p.summary && <p className="text-[10px] mt-2 text-gray-700">{p.summary}</p>}
+    </header>
+
+    <section className="mb-4">
+      <SectionHeader title="Education" accent={accent} />
+      {edu.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <div className="flex justify-between text-[11px] font-bold">
+            <span>{item.institution || 'University'}</span>
+            <span>{formatRange(item.startDate, item.endDate)}</span>
+          </div>
+          <p className="text-[10px]">{[item.degree, item.fieldOfStudy].filter(Boolean).join(' in ')}</p>
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-4">
+      <SectionHeader title="Projects" accent={accent} />
+      {proj.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <p className="text-[11px] font-bold">{item.name || 'Project Name'}</p>
+          <p className="text-[10px]">{item.description}</p>
+        </div>
+      ))}
+    </section>
+
+    <section className="mb-4">
+      <SectionHeader title="Experience" accent={accent} />
+      {exp.map((item, idx) => (
+        <div key={idx} className="mb-2">
+          <p className="text-[11px] font-bold">{item.position || 'Role'} - {item.company || 'Company'}</p>
+          <p className="text-[9px] text-gray-600">{formatRange(item.startDate, item.endDate, item.current)}</p>
+          <ul className="list-disc ml-5">
+            {(item.highlights || []).filter(Boolean).map((h, i) => (
+              <li key={i} className="text-[9px]">{h}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+
+    <section>
+      <SectionHeader title="Skills" accent={accent} />
+      {skills.map((s, idx) => (
+        <p key={idx} className="text-[10px]">
+          <span className="font-bold">{s.category}:</span> {(s.items || []).join(', ')}
+        </p>
+      ))}
+    </section>
+  </div>
+);
+
+const renderByTemplate = ({ layoutKey, props }) => {
+  switch (layoutKey) {
+    case 'jake':
+      return renderJake(props);
+    case 'deedy':
+      return renderDeedy(props);
+    case 'modern':
+      return renderModern(props);
+    case 'minimal':
+      return renderMinimal(props);
+    case 'student':
+      return renderStudent(props);
+    case 'classic':
+    default:
+      return renderClassic(props);
   }
+};
+
+const ResumePreview = forwardRef(({ resume, template = 'overleaf-jake', className = '' }, ref) => {
+  const p = resume?.personalDetails || {};
+  const edu = Array.isArray(resume?.education) ? resume.education : [];
+  const exp = Array.isArray(resume?.experience) ? resume.experience : [];
+  const skills = Array.isArray(resume?.skills) ? resume.skills : [];
+  const proj = Array.isArray(resume?.projects) ? resume.projects : [];
+
+  const layoutKey = getLayoutKey(template);
+  const accentByLayout = {
+    jake: '#111827',
+    deedy: '#b91c1c',
+    modern: '#2563eb',
+    minimal: '#111827',
+    student: '#2563eb',
+    classic: '#1e293b'
+  };
+
+  const accent = accentByLayout[layoutKey] || '#1e293b';
 
   return (
-    <div 
-      ref={ref} 
-      className="resume-preview p-8 bg-white shadow-xl mx-auto overflow-hidden text-black" 
+    <div
+      ref={ref}
+      className={`resume-preview p-8 bg-white shadow-xl mx-auto overflow-hidden text-black ${className}`.trim()}
       style={{ width: '100%', maxWidth: '800px', minHeight: '1122px', boxSizing: 'border-box' }}
     >
-      {renderStrategy(p, exp, edu, skills, proj, primaryColor)}
+      {renderByTemplate({
+        layoutKey,
+        props: { p, exp, edu, skills, proj, accent }
+      })}
     </div>
   );
 });

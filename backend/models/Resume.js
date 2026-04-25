@@ -13,8 +13,8 @@ const resumeSchema = new mongoose.Schema({
   },
   template: {
     type: String,
-    enum: ['clean', 'professional', 'modern'],
-    default: 'clean'
+    default: 'overleaf-jake',
+    index: true
   },
   personalDetails: {
     fullName: { type: String, default: '' },
@@ -62,6 +62,10 @@ const resumeSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  thumbnail: {
+    type: String,
+    default: ''
+  },
   // AI enhancement score
   aiScore: {
     type: Number,
@@ -74,7 +78,38 @@ const resumeSchema = new mongoose.Schema({
   isLatexResume: {
     type: Boolean,
     default: false
-  }
+  },
+  history: [{
+    eventType: {
+      type: String,
+      enum: ['save', 'download'],
+      required: true
+    },
+    title: {
+      type: String,
+      default: ''
+    },
+    template: {
+      type: String,
+      default: ''
+    },
+    thumbnail: {
+      type: String,
+      default: ''
+    },
+    latexSource: {
+      type: String,
+      default: ''
+    },
+    snapshot: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, {
   timestamps: true
 });

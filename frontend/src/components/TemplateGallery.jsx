@@ -4,13 +4,15 @@ import { HiLockClosed, HiCheckCircle, HiSearch } from 'react-icons/hi';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import ResumePreview from './ResumePreview';
+import { SAMPLE_RESUME } from '../data/sampleResume';
 
 const CATEGORIES = [
   { id: 'all', name: 'All Templates' },
   { id: 'professional', name: 'Professional' },
   { id: 'student', name: 'Student' },
   { id: 'creative', name: 'Creative' },
-  { id: 'minimal', name: 'Minimalist' },
+  { id: 'minimal', name: 'Minimal' },
   { id: 'premium', name: 'Premium (PRO)' }
 ];
 
@@ -28,9 +30,8 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      // Fetch from backend
       const res = await templateAPI.getAll(activeCategory);
-      setTemplates(res.data);
+      setTemplates(res.data || []);
     } catch (error) {
       toast.error('Failed to load templates');
       console.error(error);
@@ -39,37 +40,40 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
     }
   };
 
-  const filteredTemplates = templates.filter(tpl => {
-    const matchesSearch = tpl.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          tpl.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+  const filteredTemplates = templates.filter((tpl) => {
+    const keyword = searchTerm.trim().toLowerCase();
+    if (!keyword) return true;
+    return (
+      tpl.name?.toLowerCase().includes(keyword) ||
+      tpl.description?.toLowerCase().includes(keyword) ||
+      tpl.subcategory?.toLowerCase().includes(keyword)
+    );
   });
 
   const isUserPremium = user?.subscriptionType === 'premium';
 
   return (
     <div className="space-y-6 animate-fadeIn pb-20">
-      {/* Search and Filter */}
       <div className="flex flex-col gap-4">
         <div className="relative">
           <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             type="text"
-            placeholder="Search premium templates..."
+            placeholder="Search resume templates..."
             className="input pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-          {CATEGORIES.map(cat => (
+          {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
               className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
                 activeCategory === cat.id
-                ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
-                : 'bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-muted)] hover:border-primary/50'
+                  ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20'
+                  : 'bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-muted)] hover:border-primary/50'
               }`}
             >
               {cat.name}
@@ -78,40 +82,55 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
         </div>
       </div>
 
-      {/* Templates Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="aspect-[3/4] rounded-xl bg-[var(--bg-secondary)] animate-pulse border border-[var(--border-color)]"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="aspect-[3/4] rounded-xl bg-[var(--bg-secondary)] animate-pulse border border-[var(--border-color)]"
+            />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filteredTemplates.map(tpl => {
+          {filteredTemplates.map((tpl) => {
             const isLocked = tpl.isPremium && !isUserPremium;
             const isSelected = selectedTemplate === tpl.templateId;
 
             return (
-              <div 
-                key={tpl._id}
+              <div
+                key={tpl._id || tpl.templateId}
                 className={`group relative card p-0 overflow-hidden cursor-pointer transition-all border-2 ${
                   isSelected ? 'border-primary' : 'border-transparent hover:border-primary/30'
                 }`}
                 onClick={() => !isLocked && onSelect(tpl.templateId)}
               >
-                <div className="relative aspect-[3/4] bg-[var(--bg-secondary)]">
-                  <img 
-                    src={tpl.thumbnail} 
-                    alt={tpl.name}
-                    className={`w-full h-full object-cover transition-all duration-500 ${isLocked ? 'blur-[3px] grayscale opacity-60' : 'group-hover:scale-105'}`}
-                  />
-                  
+                <div className="relative aspect-[3/4] bg-[var(--bg-secondary)] overflow-hidden">
+                  <div className={`absolute inset-0 ${isLocked ? 'blur-[2px] grayscale opacity-70' : ''}`}>
+                    <div className="flex justify-center pt-2">
+                      <div
+                        className="pointer-events-none"
+                        style={{
+                          width: '170px',
+                          transform: 'scale(0.21)',
+                          transformOrigin: 'top center'
+                        }}
+                      >
+                        <ResumePreview
+                          resume={SAMPLE_RESUME}
+                          template={tpl.templateId}
+                          className="shadow-none border border-slate-200"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {isLocked && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex flex-col items-center justify-center p-4 text-center">
                       <HiLockClosed className="text-white text-3xl mb-2" />
                       <p className="text-white text-[10px] font-black uppercase tracking-widest mb-2">Premium</p>
-                      <Link 
-                        to="/pricing" 
+                      <Link
+                        to="/pricing"
                         className="px-3 py-1.5 bg-white text-black text-[9px] font-bold rounded hover:bg-gray-100 transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -125,7 +144,7 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
                       <HiCheckCircle className="text-white text-xl" />
                     </div>
                   )}
-                  
+
                   {tpl.isPremium && !isLocked && (
                     <div className="absolute top-3 left-3 px-2 py-1 bg-amber-500 text-white text-[9px] font-black rounded uppercase">
                       PRO
@@ -133,20 +152,22 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
                   )}
                 </div>
 
-                <div className="p-3 bg-[var(--bg-primary)]">
+                <div className="p-3 bg-[var(--bg-primary)] border-t border-[var(--border-color)]">
                   <h4 className="font-bold text-xs mb-0.5">{tpl.name}</h4>
                   <p className="text-[9px] text-[var(--text-muted)] line-clamp-1">{tpl.description}</p>
+                  <div className="mt-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
+                    {tpl.category}
+                    {tpl.subcategory ? ` • ${tpl.subcategory}` : ''}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
-      
+
       {!loading && filteredTemplates.length === 0 && (
-        <div className="py-12 text-center text-[var(--text-muted)] text-sm">
-          No templates found.
-        </div>
+        <div className="py-12 text-center text-[var(--text-muted)] text-sm">No templates found.</div>
       )}
     </div>
   );

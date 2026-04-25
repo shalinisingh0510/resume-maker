@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { templateAPI } from '../services/api';
-import { HiSparkles, HiCheckCircle, HiDeviceMobile, HiGlobeAlt, HiLightningBolt, HiArrowRight, HiShieldCheck } from 'react-icons/hi';
+import { HiSparkles, HiCheckCircle, HiDeviceMobile, HiArrowRight, HiShieldCheck } from 'react-icons/hi';
+import ResumePreview from '../components/ResumePreview';
+import { SAMPLE_RESUME } from '../data/sampleResume';
 
 const Home = () => {
   const { user } = useAuth();
@@ -93,7 +95,7 @@ const Home = () => {
               <p className="text-[var(--text-secondary)]">Pick a professional starting point and customize it with our AI builder.</p>
             </div>
             <Link to="/signup" className="group flex items-center gap-2 text-primary font-bold hover:underline">
-              View all 50+ templates <HiArrowRight className="transition-transform group-hover:translate-x-1" />
+              View full template gallery <HiArrowRight className="transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
 
@@ -101,7 +103,22 @@ const Home = () => {
             {featuredTemplates.map((tpl) => (
               <div key={tpl._id} className="group card p-0 overflow-hidden cursor-pointer" onClick={() => handleUseTemplate(tpl.templateId)}>
                 <div className="relative aspect-[3/4] bg-[var(--bg-primary)] overflow-hidden">
-                  <img src={tpl.thumbnail} alt={tpl.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className="absolute inset-0 flex justify-center pt-2 transition-transform duration-700 group-hover:scale-110">
+                    <div
+                      className="pointer-events-none"
+                      style={{
+                        width: '170px',
+                        transform: 'scale(0.21)',
+                        transformOrigin: 'top center'
+                      }}
+                    >
+                      <ResumePreview
+                        resume={SAMPLE_RESUME}
+                        template={tpl.templateId}
+                        className="shadow-none border border-slate-200"
+                      />
+                    </div>
+                  </div>
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-6">
                     <button className="btn btn-primary btn-sm w-full">Use this Template</button>
                   </div>

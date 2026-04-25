@@ -17,16 +17,30 @@ const templateSchema = new mongoose.Schema({
     enum: ['professional', 'student', 'creative', 'clean', 'minimal'],
     index: true
   },
+  subcategory: {
+    type: String,
+    default: ''
+  },
   description: {
-    type: String
+    type: String,
+    default: ''
   },
   thumbnail: {
     type: String,
-    required: true
+    default: ''
   },
   isPremium: {
     type: Boolean,
     default: false
+  },
+  sortOrder: {
+    type: Number,
+    default: 1000,
+    index: true
+  },
+  source: {
+    provider: { type: String, default: '' },
+    url: { type: String, default: '' }
   },
   config: {
     type: mongoose.Schema.Types.Mixed,

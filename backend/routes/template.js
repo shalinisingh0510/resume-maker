@@ -7,13 +7,20 @@ const router = express.Router();
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const { category } = req.query;
+    const { category, q } = req.query;
     const query = {};
-    if (category && category !== 'all') {
+    if (category === 'premium') {
+      query.isPremium = true;
+    } else if (category && category !== 'all') {
       query.category = category;
     }
+
+    if (q && String(q).trim()) {
+      const pattern = new RegExp(String(q).trim(), 'i');
+      query.$or = [{ name: pattern }, { description: pattern }, { subcategory: pattern }];
+    }
     
-    const templates = await Template.find(query).sort({ isPremium: 1, name: 1 });
+    const templates = await Template.find(query).sort({ sortOrder: 1, isPremium: 1, name: 1 });
     res.json(templates);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching templates', error: error.message });
