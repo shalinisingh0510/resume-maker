@@ -20,7 +20,7 @@ const upload = multer({
     if (file.mimetype === 'application/pdf' || file.mimetype === 'text/plain') {
       cb(null, true);
     } else {
-      cb(null, false); // Reject silently or handle specifically
+      cb(null, false);
     }
   }
 });
@@ -71,14 +71,10 @@ const buildResumeText = (resume) => {
 // Helper: Clean AI response JSON
 const cleanAIResponse = (content) => {
   try {
-    // Remove potential markdown code blocks
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
+    if (jsonMatch) return JSON.parse(jsonMatch[0]);
     return JSON.parse(content);
   } catch (e) {
-    console.error('JSON Parse Error:', content);
     throw new Error('AI returned an invalid response format');
   }
 };
@@ -88,23 +84,17 @@ router.post('/enhance', protect, checkAILimit, async (req, res) => {
   try {
     const { resumeId, resumeText } = req.body;
     let textToEnhance = resumeText;
-
     if (resumeId && !resumeText) {
       const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
       if (!resume) return res.status(404).json({ message: 'Resume not found' });
       textToEnhance = buildResumeText(resume);
     }
-
     if (!textToEnhance || textToEnhance.trim().length === 0) {
       return res.status(400).json({ message: 'No resume content provided' });
     }
-
     const completion = await groq.chat.completions.create({
       messages: [
-        {
-          role: 'system',
-          content: `You are an expert resume consultant. Enhance the given resume content. Provide a JSON object with: "enhancedContent", "improvements" (array), "keywords" (array), "tips" (array).`
-        },
+        { role: 'system', content: `You are an expert resume consultant. Enhance content and provide JSON: {enhancedContent, improvements, keywords, tips}.` },
         { role: 'user', content: `Enhance this:\n\n${textToEnhance}` }
       ],
       model: 'llama-3.3-70b-versatile',
@@ -112,18 +102,10 @@ router.post('/enhance', protect, checkAILimit, async (req, res) => {
       max_tokens: 4000,
       response_format: { type: 'json_object' }
     });
-
     const aiResponse = cleanAIResponse(completion.choices[0].message.content);
-
     await User.findByIdAndUpdate(req.user._id, { $inc: { aiUsageCount: 1 } });
-
-    res.json({
-      success: true,
-      data: aiResponse,
-      aiUsageCount: (req.user.aiUsageCount || 0) + 1
-    });
+    res.json({ success: true, data: aiResponse, aiUsageCount: (req.user.aiUsageCount || 0) + 1 });
   } catch (error) {
-    console.error('AI Enhance Error:', error);
     res.status(500).json({ message: error.message || 'Error processing AI enhancement' });
   }
 });
@@ -135,16 +117,27 @@ router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async 
     let textToScore = resumeText;
 
     if (req.file) {
-      try {
-        if (req.file.mimetype === 'application/pdf') {
+      if (req.file.mimetype === 'application/pdf') {
+        try {
+          // Use a simple buffer check before passing to pdf-parse
+          if (!req.file.buffer || req.file.buffer.length === 0) {
+            throw new Error('Empty file buffer');
+          }
           const data = await pdf(req.file.buffer);
           textToScore = data.text;
-        } else {
-          textToScore = req.file.buffer.toString('utf-8');
+        } catch (pdfErr) {
+          console.error('PDF Parse Error:', pdfErr);
+          // If PDF parse fails, try to see if it's just a text file renamed to .pdf
+          textToScore = req.file.buffer.toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, '');
+          if (textToScore.length < 50) {
+             return res.status(400).json({ 
+               message: 'Could not extract text from PDF. Please ensure it is not an image-only PDF or try copying text manually.',
+               error: pdfErr.message 
+             });
+          }
         }
-      } catch (err) {
-        console.error('PDF Parse error:', err);
-        return res.status(400).json({ message: 'Failed to read PDF file content' });
+      } else {
+        textToScore = req.file.buffer.toString('utf-8');
       }
     } else if (resumeId && (!resumeText || resumeText === 'undefined')) {
       const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
@@ -153,19 +146,14 @@ router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async 
     }
 
     if (!textToScore || textToScore.trim().length < 20) {
-      return res.status(400).json({ message: 'Resume content too short or missing' });
+      return res.status(400).json({ message: 'Resume content is missing or too short' });
     }
 
     const targetJob = jobTitle || 'General Professional';
-
     const completion = await groq.chat.completions.create({
       messages: [
-        {
-          role: 'system',
-          content: `You are an expert ATS specialist. Analyze resume for: ${targetJob}.
-Format as JSON object with: "overallScore" (0-100), "breakdown" (object with roleRelevance, contentQuality, atsCompatibility, impact, completeness scores/maxScores), "strengths" (array), "weaknesses" (array), "suggestions" (array), "summary" (string).`
-        },
-        { role: 'user', content: `Score this resume for ${targetJob}:\n\n${textToScore}` }
+        { role: 'system', content: `Expert ATS specialist. Analyze for: ${targetJob}. Provide JSON: {overallScore, breakdown, strengths, weaknesses, suggestions, summary}.` },
+        { role: 'user', content: `Analyze this resume for ${targetJob}:\n\n${textToScore}` }
       ],
       model: 'llama-3.3-70b-versatile',
       temperature: 0.5,
@@ -174,7 +162,6 @@ Format as JSON object with: "overallScore" (0-100), "breakdown" (object with rol
     });
 
     const aiResponse = cleanAIResponse(completion.choices[0].message.content);
-
     await User.findByIdAndUpdate(req.user._id, { $inc: { aiUsageCount: 1 } });
 
     if (resumeId && resumeId !== 'undefined') {
@@ -184,17 +171,10 @@ Format as JSON object with: "overallScore" (0-100), "breakdown" (object with rol
       });
     }
 
-    res.json({
-      success: true,
-      data: aiResponse,
-      aiUsageCount: (req.user.aiUsageCount || 0) + 1
-    });
+    res.json({ success: true, data: aiResponse, aiUsageCount: (req.user.aiUsageCount || 0) + 1 });
   } catch (error) {
-    console.error('AI Score Error:', error);
-    res.status(500).json({ 
-      message: 'Error processing AI scoring',
-      error: error.message
-    });
+    console.error('AI Score General Error:', error);
+    res.status(500).json({ message: 'Error processing AI scoring', error: error.message });
   }
 });
 
