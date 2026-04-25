@@ -20,7 +20,7 @@ const upload = multer({
     if (file.mimetype === 'application/pdf' || file.mimetype === 'text/plain') {
       cb(null, true);
     } else {
-      cb(new Error('Only .pdf and .txt files are supported'), false);
+      cb(null, false); // Reject silently or handle specifically
     }
   }
 });
@@ -28,13 +28,11 @@ const upload = multer({
 // Helper: Build resume text from structured data
 const buildResumeText = (resume) => {
   let text = '';
-
   if (resume.personalDetails) {
     const p = resume.personalDetails;
     text += `Name: ${p.fullName}\nEmail: ${p.email}\nPhone: ${p.phone}\nLocation: ${p.location}\n`;
     if (p.summary) text += `Summary: ${p.summary}\n`;
   }
-
   if (resume.experience && resume.experience.length > 0) {
     text += '\n--- EXPERIENCE ---\n';
     resume.experience.forEach(exp => {
@@ -45,7 +43,6 @@ const buildResumeText = (resume) => {
       }
     });
   }
-
   if (resume.education && resume.education.length > 0) {
     text += '\n--- EDUCATION ---\n';
     resume.education.forEach(edu => {
@@ -53,14 +50,12 @@ const buildResumeText = (resume) => {
       if (edu.gpa) text += `GPA: ${edu.gpa}\n`;
     });
   }
-
   if (resume.skills && resume.skills.length > 0) {
     text += '\n--- SKILLS ---\n';
     resume.skills.forEach(skill => {
       text += `${skill.category}: ${skill.items.join(', ')}\n`;
     });
   }
-
   if (resume.projects && resume.projects.length > 0) {
     text += '\n--- PROJECTS ---\n';
     resume.projects.forEach(proj => {
@@ -70,103 +65,95 @@ const buildResumeText = (resume) => {
       }
     });
   }
-
   return text;
+};
+
+// Helper: Clean AI response JSON
+const cleanAIResponse = (content) => {
+  try {
+    // Remove potential markdown code blocks
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return JSON.parse(content);
+  } catch (e) {
+    console.error('JSON Parse Error:', content);
+    throw new Error('AI returned an invalid response format');
+  }
 };
 
 // POST /api/ai/enhance - AI Resume Enhancement
 router.post('/enhance', protect, checkAILimit, async (req, res) => {
   try {
     const { resumeId, resumeText } = req.body;
-
     let textToEnhance = resumeText;
 
-    // If resumeId is provided, fetch resume from DB
     if (resumeId && !resumeText) {
       const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
-      if (!resume) {
-        return res.status(404).json({ message: 'Resume not found' });
-      }
+      if (!resume) return res.status(404).json({ message: 'Resume not found' });
       textToEnhance = buildResumeText(resume);
     }
 
     if (!textToEnhance || textToEnhance.trim().length === 0) {
-      return res.status(400).json({ message: 'No resume content provided for enhancement' });
+      return res.status(400).json({ message: 'No resume content provided' });
     }
 
     const completion = await groq.chat.completions.create({
       messages: [
         {
           role: 'system',
-          content: `You are an expert resume consultant and professional career coach. Your task is to enhance the given resume content. Provide:
-
-1. **Enhanced Content**: Rewrite each section with stronger action verbs, quantified achievements, and professional language.
-2. **Bullet Point Improvements**: Transform weak bullet points into impactful, results-oriented statements using the STAR method (Situation, Task, Action, Result).
-3. **Grammar & Clarity Fixes**: Correct any grammar issues and improve sentence clarity.
-4. **Professional Summary**: If missing or weak, suggest a compelling professional summary.
-5. **Keywords**: Suggest relevant industry keywords to include for ATS optimization.
-
-Format your response as a JSON object with these keys:
-- "enhancedContent": the full enhanced resume text
-- "improvements": array of specific improvements made (strings)
-- "keywords": array of suggested keywords
-- "tips": array of additional tips for the resume`
+          content: `You are an expert resume consultant. Enhance the given resume content. Provide a JSON object with: "enhancedContent", "improvements" (array), "keywords" (array), "tips" (array).`
         },
-        {
-          role: 'user',
-          content: `Please enhance this resume:\n\n${textToEnhance}`
-        }
+        { role: 'user', content: `Enhance this:\n\n${textToEnhance}` }
       ],
       model: 'llama-3.3-70b-versatile',
       temperature: 0.7,
-      max_tokens: 4096,
+      max_tokens: 4000,
       response_format: { type: 'json_object' }
     });
 
-    const aiResponse = JSON.parse(completion.choices[0].message.content);
+    const aiResponse = cleanAIResponse(completion.choices[0].message.content);
 
-    // Increment AI usage count for the user
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: { aiUsageCount: 1 }
-    });
+    await User.findByIdAndUpdate(req.user._id, { $inc: { aiUsageCount: 1 } });
 
     res.json({
       success: true,
       data: aiResponse,
-      aiUsageCount: req.user.aiUsageCount + 1
+      aiUsageCount: (req.user.aiUsageCount || 0) + 1
     });
   } catch (error) {
     console.error('AI Enhance Error:', error);
-    res.status(500).json({ message: 'Error processing AI enhancement' });
+    res.status(500).json({ message: error.message || 'Error processing AI enhancement' });
   }
 });
 
-// POST /api/ai/score - AI Resume Scoring with Job Profile Support & File Upload
+// POST /api/ai/score - AI Resume Scoring
 router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async (req, res) => {
   try {
     const { resumeId, resumeText, jobTitle } = req.body;
     let textToScore = resumeText;
 
-    // 1. Handle File Upload
     if (req.file) {
-      if (req.file.mimetype === 'application/pdf') {
-        const data = await pdf(req.file.buffer);
-        textToScore = data.text;
-      } else {
-        textToScore = req.file.buffer.toString('utf-8');
+      try {
+        if (req.file.mimetype === 'application/pdf') {
+          const data = await pdf(req.file.buffer);
+          textToScore = data.text;
+        } else {
+          textToScore = req.file.buffer.toString('utf-8');
+        }
+      } catch (err) {
+        console.error('PDF Parse error:', err);
+        return res.status(400).json({ message: 'Failed to read PDF file content' });
       }
-    } 
-    // 2. Handle Resume ID from DB
-    else if (resumeId && !resumeText) {
+    } else if (resumeId && (!resumeText || resumeText === 'undefined')) {
       const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
-      if (!resume) {
-        return res.status(404).json({ message: 'Resume not found' });
-      }
+      if (!resume) return res.status(404).json({ message: 'Resume not found' });
       textToScore = buildResumeText(resume);
     }
 
-    if (!textToScore || textToScore.trim().length === 0) {
-      return res.status(400).json({ message: 'No resume content provided for scoring' });
+    if (!textToScore || textToScore.trim().length < 20) {
+      return res.status(400).json({ message: 'Resume content too short or missing' });
     }
 
     const targetJob = jobTitle || 'General Professional';
@@ -175,44 +162,22 @@ router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async 
       messages: [
         {
           role: 'system',
-          content: `You are an expert resume evaluator and ATS (Applicant Tracking System) specialist. 
-Analyze the given resume specifically for the role of: ${targetJob}.
-
-Score the resume on a scale of 0-100 based on these criteria relative to the ${targetJob} role:
-- **Role Relevance (25 pts)**: How well the experience and skills match ${targetJob} requirements.
-- **Content Quality (20 pts)**: Action verbs, quantified achievements.
-- **ATS Compatibility (20 pts)**: Keywords for ${targetJob}, standard formatting.
-- **Impact & Results (20 pts)**: Measurable outcomes.
-- **Completeness (15 pts)**: All essential sections present.
-
-Format your response as a JSON object with these keys:
-- "overallScore": number 0-100
-- "breakdown": object with scores for each criterion (roleRelevance, contentQuality, atsCompatibility, impact, completeness) each with "score" (number) and "maxScore" (number)
-- "strengths": array of 3-5 strength points
-- "weaknesses": array of 3-5 areas to improve
-- "suggestions": array of 5-8 actionable improvement suggestions
-- "summary": a 2-3 sentence overview of the resume quality for a ${targetJob} position.`
+          content: `You are an expert ATS specialist. Analyze resume for: ${targetJob}.
+Format as JSON object with: "overallScore" (0-100), "breakdown" (object with roleRelevance, contentQuality, atsCompatibility, impact, completeness scores/maxScores), "strengths" (array), "weaknesses" (array), "suggestions" (array), "summary" (string).`
         },
-        {
-          role: 'user',
-          content: `Please score and analyze this resume for a ${targetJob} position:\n\n${textToScore}`
-        }
+        { role: 'user', content: `Score this resume for ${targetJob}:\n\n${textToScore}` }
       ],
       model: 'llama-3.3-70b-versatile',
       temperature: 0.5,
-      max_tokens: 2048,
+      max_tokens: 2000,
       response_format: { type: 'json_object' }
     });
 
-    const aiResponse = JSON.parse(completion.choices[0].message.content);
+    const aiResponse = cleanAIResponse(completion.choices[0].message.content);
 
-    // Increment AI usage count for the user
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: { aiUsageCount: 1 }
-    });
+    await User.findByIdAndUpdate(req.user._id, { $inc: { aiUsageCount: 1 } });
 
-    // Optionally save score to resume if ID was provided
-    if (resumeId) {
+    if (resumeId && resumeId !== 'undefined') {
       await Resume.findByIdAndUpdate(resumeId, {
         aiScore: aiResponse.overallScore,
         aiSuggestions: aiResponse.suggestions || []
@@ -222,11 +187,14 @@ Format your response as a JSON object with these keys:
     res.json({
       success: true,
       data: aiResponse,
-      aiUsageCount: req.user.aiUsageCount + 1
+      aiUsageCount: (req.user.aiUsageCount || 0) + 1
     });
   } catch (error) {
     console.error('AI Score Error:', error);
-    res.status(500).json({ message: 'Error processing AI scoring' });
+    res.status(500).json({ 
+      message: 'Error processing AI scoring',
+      error: error.message
+    });
   }
 });
 
