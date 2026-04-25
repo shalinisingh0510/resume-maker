@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://resume-maker-4nvt.onrender.com/api';
 
 // Create axios instance
 const api = axios.create({
