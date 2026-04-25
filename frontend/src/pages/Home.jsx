@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { HiSparkles, HiCheckCircle, HiSmartphone, HiGlobeAlt, HiLightningBolt } from 'react-icons/hi';
+import { HiSparkles, HiCheckCircle, HiDeviceMobile, HiGlobeAlt, HiLightningBolt } from 'react-icons/hi';
 
 const Home = () => {
   const { user } = useAuth();
@@ -19,7 +19,7 @@ const Home = () => {
     {
       title: 'Live Preview',
       description: 'See your changes in real-time with our side-by-side live editor and high-quality PDF export.',
-      icon: <HiSmartphone className="w-6 h-6 text-secondary" />
+      icon: <HiDeviceMobile className="w-6 h-6 text-secondary" />
     },
     {
       title: 'Global Export',
