@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
-import { HiCheck, HiStar, HiRocket, HiCheckCircle } from 'react-icons/hi';
+import { HiCheck, HiStar, HiLightningBolt, HiCheckCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -42,7 +42,7 @@ const Pricing = () => {
         <div className="card flex-1 flex flex-col p-10 hover:border-[var(--border-color)] transition-all">
           <div className="mb-8">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <HiRocket className="text-green-500" /> Free Plan
+              <HiLightningBolt className="text-green-500" /> Free Plan
             </h2>
             <div className="flex items-baseline gap-1 mb-2">
               <span className="text-5xl font-extrabold">$0</span>
