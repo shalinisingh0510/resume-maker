@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resumeAPI } from '../services/api';
+import { HiPlus, HiPencilAlt, HiTrash, HiDocumentText } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -36,56 +37,93 @@ const ResumeHistory = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center py-20"><div className="spinner-lg"></div></div>;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="container-app py-10 animate-fadeIn">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div className="container-app py-12 animate-fadeIn">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Resume History</h1>
-          <p style={{ color: 'var(--color-text-secondary)' }}>
-            Manage and export your previously created resumes.
-          </p>
+          <h1 className="text-4xl font-extrabold mb-3">Resume History</h1>
+          <p className="text-[var(--text-secondary)]">Manage and track your previously created professional resumes.</p>
         </div>
-        <Link to="/builder" className="btn btn-primary">
-          + Create New Resume
+        <Link to="/builder" className="btn btn-primary h-12 px-6 gap-2">
+          <HiPlus className="w-5 h-5" /> New Resume
         </Link>
       </div>
 
-      <div className="card glass p-0 overflow-hidden">
+      <div className="card p-0 overflow-hidden shadow-xl">
         {resumes.length === 0 ? (
-          <div className="p-10 text-center">
-            <p className="text-lg" style={{ color: 'var(--color-text-secondary)' }}>No resumes found.</p>
+          <div className="p-20 text-center flex flex-col items-center">
+            <div className="w-20 h-20 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center text-4xl mb-6 text-[var(--text-muted)]">
+               <HiDocumentText />
+            </div>
+            <h3 className="text-2xl font-bold mb-2">No history found</h3>
+            <p className="text-[var(--text-secondary)] mb-8 max-w-sm">You haven't created any resumes yet. Start building your professional profile now.</p>
+            <Link to="/builder" className="btn btn-primary px-8">Create First Resume</Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left">
               <thead>
-                <tr style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)' }}>
-                  <th className="p-4 font-semibold">Title</th>
-                  <th className="p-4 font-semibold">Template</th>
-                  <th className="p-4 font-semibold">AI Score</th>
-                  <th className="p-4 font-semibold">Last Modified</th>
-                  <th className="p-4 font-semibold text-right">Actions</th>
+                <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border-color)]">
+                  <th className="p-5 text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Resume Title</th>
+                  <th className="p-5 text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Template</th>
+                  <th className="p-5 text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">AI Score</th>
+                  <th className="p-5 text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Last Modified</th>
+                  <th className="p-5 text-xs font-black uppercase tracking-widest text-[var(--text-muted)] text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-[var(--border-color)]">
                 {resumes.map(resume => (
-                  <tr key={resume._id} style={{ borderBottom: '1px solid var(--color-border)' }} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="p-4 font-medium text-white">{resume.title || 'Untitled Resume'}</td>
-                    <td className="p-4 capitalize">{resume.template}</td>
-                    <td className="p-4">
-                      {resume.aiScore ? (
-                        <span className={`badge ${resume.aiScore >= 80 ? 'badge-success' : resume.aiScore >= 60 ? 'badge-warning' : 'badge-danger'}`}>
-                          {resume.aiScore}
-                        </span>
-                      ) : '-'}
+                  <tr key={resume._id} className="hover:bg-[var(--bg-secondary)]/50 transition-colors group">
+                    <td className="p-5">
+                       <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center text-xl group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            📄
+                          </div>
+                          <span className="font-bold text-[var(--text-primary)]">{resume.title || 'Untitled Resume'}</span>
+                       </div>
                     </td>
-                    <td className="p-4">{format(new Date(resume.updatedAt), 'MMM dd, yyyy')}</td>
-                    <td className="p-4 text-right flex justify-end gap-3">
-                      <Link to={`/builder/${resume._id}`} className="text-indigo-400 hover:text-indigo-300 font-medium">Edit</Link>
-                      <button onClick={() => deleteResume(resume._id)} className="text-red-400 hover:text-red-300 font-medium">Delete</button>
+                    <td className="p-5">
+                      <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-[var(--bg-secondary)] text-[var(--text-secondary)] capitalize border border-[var(--border-color)]">
+                        {resume.template}
+                      </span>
+                    </td>
+                    <td className="p-5">
+                      {resume.aiScore ? (
+                        <div className="flex items-center gap-2">
+                           <div className="w-16 bg-[var(--bg-secondary)] h-1.5 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full ${resume.aiScore >= 80 ? 'bg-green-500' : resume.aiScore >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                style={{ width: `${resume.aiScore}%` }}
+                              />
+                           </div>
+                           <span className={`text-xs font-black ${resume.aiScore >= 80 ? 'text-green-500' : resume.aiScore >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                             {resume.aiScore}
+                           </span>
+                        </div>
+                      ) : <span className="text-[var(--text-muted)] text-xs font-medium">—</span>}
+                    </td>
+                    <td className="p-5 text-sm text-[var(--text-secondary)] font-medium">
+                      {format(new Date(resume.updatedAt), 'MMM d, yyyy')}
+                    </td>
+                    <td className="p-5">
+                      <div className="flex justify-end gap-4">
+                        <Link to={`/builder/${resume._id}`} className="flex items-center gap-1.5 text-sm font-bold text-primary hover:underline">
+                          <HiPencilAlt className="w-4 h-4" /> Edit
+                        </Link>
+                        <button 
+                          onClick={() => deleteResume(resume._id)} 
+                          className="flex items-center gap-1.5 text-sm font-bold text-red-400 hover:text-red-500 transition-colors"
+                        >
+                          <HiTrash className="w-4 h-4" /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

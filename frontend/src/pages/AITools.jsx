@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { aiAPI, resumeAPI } from '../services/api';
+import { HiSparkles, HiShieldCheck, HiOutlineClipboardCopy, HiRefresh } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 const AITools = () => {
   const { user, updateUser } = useAuth();
@@ -60,26 +62,26 @@ const AITools = () => {
   };
 
   return (
-    <div className="container-app py-10 animate-fadeIn">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold mb-4">AI Career Assistant</h1>
-        <p className="text-lg" style={{ color: 'var(--color-text-secondary)' }}>
-          Let our advanced AI analyze and perfect your resume.
+    <div className="container-app py-12 animate-fadeIn">
+      <div className="text-center max-w-2xl mx-auto mb-16">
+        <h1 className="text-4xl font-extrabold mb-4">AI Career Assistant</h1>
+        <p className="text-lg text-[var(--text-secondary)]">
+          Let our advanced AI analyze, score, and perfect your resume content for maximum impact.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-6xl mx-auto items-start">
         {/* Input Section */}
-        <div className="card glass">
-          <div className="flex gap-2 mb-6 p-1 bg-slate-800/50 rounded-lg w-fit">
+        <div className="card shadow-xl p-8">
+          <div className="flex p-1 bg-[var(--bg-secondary)] rounded-xl mb-8 w-fit border border-[var(--border-color)]">
             <button
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${mode === 'score' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'score' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
               onClick={() => setMode('score')}
             >
               Get ATS Score
             </button>
             <button
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${mode === 'enhance' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'enhance' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
               onClick={() => setMode('enhance')}
             >
               Enhance Content
@@ -88,167 +90,187 @@ const AITools = () => {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>Select Existing Resume</label>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[var(--text-muted)]">Select Resume</label>
               <select
                 value={selectedResumeId}
                 onChange={(e) => {
                   setSelectedResumeId(e.target.value);
                   if (e.target.value) setTextInput('');
                 }}
-                className="input"
+                className="input cursor-pointer"
               >
-                <option value="">-- Choose a resume (or paste text below) --</option>
+                <option value="">— Choose an existing resume —</option>
                 {resumes.map(r => (
                   <option key={r._id} value={r._id}>{r.title || 'Untitled Resume'}</option>
                 ))}
               </select>
             </div>
 
-            <div className="flex items-center gap-4">
-              <hr className="flex-1 border-slate-700" />
-              <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">OR</span>
-              <hr className="flex-1 border-slate-700" />
+            <div className="relative py-2">
+               <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[var(--border-color)]"></div>
+               </div>
+               <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="bg-[var(--bg-card)] px-3 text-[var(--text-muted)]">OR PASTE TEXT</span>
+               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>Paste Resume Text</label>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[var(--text-muted)]">Raw Resume Text</label>
               <textarea
                 value={textInput}
                 onChange={(e) => {
                   setTextInput(e.target.value);
                   if (e.target.value) setSelectedResumeId('');
                 }}
-                className="input min-h-[200px]"
-                placeholder="Paste your raw resume text here for analysis..."
+                className="input min-h-[250px] text-sm font-medium"
+                placeholder="Paste your professional summary or experience bullet points here..."
                 disabled={!!selectedResumeId}
               />
             </div>
 
             <button 
               type="submit" 
-              className="btn btn-primary w-full py-3 text-lg mt-2"
+              className="btn btn-primary w-full h-14 text-lg gap-3"
               disabled={loading || (!selectedResumeId && !textInput.trim())}
             >
               {loading ? (
-                <span className="flex items-center gap-2"><span className="spinner"></span> Processing...</span>
-              ) : mode === 'score' ? 'Analyze & Score Resume' : 'Enhance Resume via AI'}
+                <>
+                  <div className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  AI is thinking...
+                </>
+              ) : (
+                <>
+                  {mode === 'score' ? <HiShieldCheck size={24} /> : <HiSparkles size={24} />}
+                  {mode === 'score' ? 'Analyze My Resume' : 'Rewrite Content'}
+                </>
+              )}
             </button>
             
             {mode === 'enhance' && user?.subscriptionType === 'free' && (
-              <p className="text-xs text-center mt-2 text-slate-400">
-                You have used {user.aiUsageCount} of 2 free enhancements. 
-                <Link to="/pricing" className="text-indigo-400 ml-1">Upgrade here.</Link>
-              </p>
+              <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-center">
+                <p className="text-xs font-bold text-amber-500">
+                  Used {user.aiUsageCount} of 2 free enhancements. 
+                  <Link to="/pricing" className="ml-2 underline">Upgrade for unlimited access</Link>
+                </p>
+              </div>
             )}
           </form>
         </div>
 
         {/* Results Section */}
-        <div className="card glass min-h-[500px]">
-          <h2 className="text-2xl font-bold mb-6 border-b border-slate-700 pb-4">AI Analysis Results</h2>
+        <div className="card shadow-2xl p-8 min-h-[600px] border-t-4 border-t-primary">
+          <h2 className="text-2xl font-bold mb-8 flex items-center gap-2">
+            AI Insight Report
+          </h2>
           
           {!result && !loading && (
-            <div className="flex flex-col items-center justify-center h-[300px] text-center opacity-50">
-              <div className="text-6xl mb-4">✨</div>
-              <p>Submit your resume to see the magic happen.</p>
+            <div className="flex flex-col items-center justify-center h-[400px] text-center">
+              <div className="w-20 h-20 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center text-5xl mb-6 grayscale">✨</div>
+              <h3 className="text-xl font-bold mb-2">Ready to Analyze</h3>
+              <p className="text-[var(--text-secondary)] max-w-xs">Fill in the details and submit to generate your AI-powered career insights.</p>
             </div>
           )}
 
           {loading && (
-            <div className="flex flex-col items-center justify-center h-[300px]">
-              <div className="spinner-lg border-indigo-500 mb-4"></div>
-              <p className="animate-pulse text-indigo-400">Analyzing your career profile...</p>
+            <div className="flex flex-col items-center justify-center h-[400px] text-center">
+              <div className="relative mb-8">
+                 <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                 <HiSparkles className="absolute inset-0 m-auto w-8 h-8 text-primary animate-pulse" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Analyzing...</h3>
+              <p className="text-[var(--text-secondary)] max-w-xs animate-pulse font-medium italic">Our AI is reviewing your profile against thousands of hiring benchmarks.</p>
             </div>
           )}
 
           {result?.type === 'score' && (
-            <div className="animate-fadeIn space-y-6">
-              <div className="flex items-center gap-6 bg-slate-800/40 p-6 rounded-xl border border-slate-700 w-fit">
-                <div className="score-circle">
-                  <svg className="w-full h-full" viewBox="0 0 36 36">
-                    <path
-                      className="text-slate-700"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none" stroke="currentColor" strokeWidth="3"
-                    />
-                    <path
-                      className={result.data.overallScore >= 80 ? 'text-emerald-500' : result.data.overallScore >= 60 ? 'text-amber-500' : 'text-red-500'}
+            <div className="animate-fadeIn space-y-10">
+              <div className="flex flex-col md:flex-row items-center gap-8 bg-[var(--bg-secondary)] p-8 rounded-3xl border border-[var(--border-color)]">
+                <div className="relative w-32 h-32 flex items-center justify-center">
+                   <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="16" fill="none" className="stroke-[var(--border-color)]" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="16" fill="none" 
+                      className={result.data.overallScore >= 80 ? 'stroke-green-500' : result.data.overallScore >= 60 ? 'stroke-amber-500' : 'stroke-red-500'}
+                      strokeWidth="3"
                       strokeDasharray={`${result.data.overallScore}, 100`}
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      fill="none" stroke="currentColor" strokeWidth="3"
+                      strokeLinecap="round"
                     />
                   </svg>
-                  <div className="score-text">
-                    <span className="text-3xl font-bold">{result.data.overallScore}</span>
-                    <span className="text-xs text-slate-400 uppercase tracking-tight">Score</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl font-black">{result.data.overallScore}</span>
+                    <span className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-tighter">ATS Score</span>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold mb-1">ATS Compatibility Score</h3>
-                  <p className="text-sm text-slate-400 max-w-xs">{result.data.summary}</p>
+                  <h3 className="text-2xl font-bold mb-2">Profile Match</h3>
+                  <p className="text-sm text-[var(--text-secondary)] font-medium leading-relaxed">{result.data.summary}</p>
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-bold text-lg mb-3 flex items-center gap-2"><span className="text-emerald-500">↑</span> Top Strengths</h4>
-                <ul className="space-y-2">
-                  {result.data.strengths?.map((s, i) => (
-                    <li key={i} className="flex gap-2 text-sm bg-emerald-500/10 text-emerald-100 p-2 rounded border border-emerald-500/20">
-                      <span>✓</span> {s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-green-500">Strengths</h4>
+                  <ul className="space-y-3">
+                    {result.data.strengths?.map((s, i) => (
+                      <li key={i} className="text-sm font-semibold flex gap-2">
+                        <HiCheckCircle className="text-green-500 w-5 h-5 shrink-0" /> {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-              <div>
-                <h4 className="font-bold text-lg mb-3 flex items-center gap-2"><span className="text-amber-500">⚡</span> Areas for Improvement</h4>
-                <ul className="space-y-2">
-                  {result.data.suggestions?.map((s, i) => (
-                    <li key={i} className="flex gap-2 text-sm bg-amber-500/10 text-amber-100 p-2 rounded border border-amber-500/20">
-                      <span>•</span> {s}
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-amber-500">Improvements</h4>
+                  <ul className="space-y-3">
+                    {result.data.suggestions?.map((s, i) => (
+                      <li key={i} className="text-sm font-semibold flex gap-2">
+                        <HiRefresh className="text-amber-500 w-5 h-5 shrink-0" /> {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           )}
 
           {result?.type === 'enhance' && (
-            <div className="animate-fadeIn space-y-6">
+            <div className="animate-fadeIn space-y-8">
               
               <div>
-                <h4 className="font-bold text-lg mb-3 text-indigo-400">Suggested Keywords</h4>
+                <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-4">Recommended Keywords</h4>
                 <div className="flex flex-wrap gap-2">
                   {result.data.keywords?.map((k, i) => (
-                    <span key={i} className="badge bg-indigo-500/20 text-indigo-200 border border-indigo-500/30 px-3 py-1">{k}</span>
+                    <span key={i} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20">{k}</span>
                   ))}
                 </div>
               </div>
 
               <div>
-                <h4 className="font-bold text-lg mb-3">Key Improvements Made</h4>
-                <ul className="space-y-2 list-disc pl-5">
+                <h4 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">AI Improvements</h4>
+                <ul className="space-y-2">
                   {result.data.improvements?.map((imp, i) => (
-                    <li key={i} className="text-sm text-slate-300">{imp}</li>
+                    <li key={i} className="text-sm font-medium flex gap-2">
+                      <span className="text-primary">•</span> {imp}
+                    </li>
                   ))}
                 </ul>
               </div>
 
               <div>
-                <div className="flex justify-between items-end mb-3">
-                  <h4 className="font-bold text-lg">Enhanced Content Output</h4>
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Perfected Content</h4>
                   <button 
-                    className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
                     onClick={() => {
                       navigator.clipboard.writeText(result.data.enhancedContent);
                       toast.success('Copied to clipboard');
                     }}
                   >
-                    Copy All
+                    <HiOutlineClipboardCopy className="w-4 h-4" /> Copy
                   </button>
                 </div>
-                <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 text-sm font-mono text-slate-300 whitespace-pre-wrap max-h-[400px] overflow-y-auto custom-scrollbar">
-                  {result.data.enhancedContent}
+                <div className="bg-[var(--bg-secondary)] p-6 rounded-2xl border border-[var(--border-color)] text-sm font-medium text-[var(--text-primary)] whitespace-pre-wrap max-h-[350px] overflow-y-auto custom-scrollbar italic leading-relaxed">
+                  "{result.data.enhancedContent}"
                 </div>
               </div>
               

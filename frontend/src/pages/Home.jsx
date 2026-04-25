@@ -1,69 +1,153 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { HiSparkles, HiCheckCircle, HiDeviceMobile, HiGlobeAlt, HiLightningBolt } from 'react-icons/hi';
 
 const Home = () => {
   const { user } = useAuth();
 
+  const features = [
+    {
+      title: 'AI Enhancement',
+      description: 'Automatically rewrite weak bullet points into impactful, results-driven statements using the STAR method.',
+      icon: <HiSparkles className="w-6 h-6 text-primary" />
+    },
+    {
+      title: 'ATS-Friendly',
+      description: 'Our templates are optimized for Applicant Tracking Systems (ATS) to ensure you pass the first hurdle.',
+      icon: <HiCheckCircle className="w-6 h-6 text-green-500" />
+    },
+    {
+      title: 'Live Preview',
+      description: 'See your changes in real-time with our side-by-side live editor and high-quality PDF export.',
+      icon: <HiDeviceMobile className="w-6 h-6 text-secondary" />
+    },
+    {
+      title: 'Global Export',
+      description: 'One-click export to professional PDF format, ready to be sent to recruiters worldwide.',
+      icon: <HiGlobeAlt className="w-6 h-6 text-indigo-400" />
+    },
+    {
+      title: 'Lightning Fast',
+      description: 'Built on high-performance infrastructure, your resume is generated and saved in milliseconds.',
+      icon: <HiLightningBolt className="w-6 h-6 text-amber-500" />
+    }
+  ];
+
   return (
-    <div className="container-app py-16 flex flex-col items-center justify-center text-center animate-fadeIn min-h-[calc(100vh-4rem)]">
-      
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-sm mb-8">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-        </span>
-        ResumeAI 2.0 is live
-      </div>
+    <div className="animate-fadeIn">
+      {/* Hero Section */}
+      <section className="relative pt-20 pb-32 overflow-hidden bg-mesh">
+        <div className="container-app relative z-10">
+          <div className="flex flex-col items-center text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold mb-8 animate-bounce">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              Now powered by GPT-4o
+            </div>
 
-      <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl">
-        Build a <span className="gradient-text">Top-Tier Resume</span> in Minutes with AI
-      </h1>
-      
-      <p className="text-lg md:text-xl mb-10 max-w-2xl mx-auto" style={{ color: 'var(--color-text-secondary)' }}>
-        Our advanced AI analyzes, scores, and enhances your resume to help you land your dream job. Choose from premium templates and stand out.
-      </p>
+            <h1 className="text-5xl md:text-8xl font-extrabold tracking-tight mb-8 max-w-5xl leading-[1.1]">
+              Build a <span className="gradient-text">Winner Resume</span> <br className="hidden md:block" /> with AI in Seconds
+            </h1>
+            
+            <p className="text-lg md:text-xl mb-12 max-w-3xl text-[var(--text-secondary)] font-medium">
+              Land your dream job with an advanced AI that analyzes, scores, and enhances your professional experience into a top-tier resume.
+            </p>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-16">
-        {user ? (
-          <Link to="/dashboard" className="btn btn-primary text-lg px-8 py-3">
-            Go to Dashboard
-          </Link>
-        ) : (
-          <>
-            <Link to="/signup" className="btn btn-primary text-lg px-8 py-3">
-              Start Building Free
-            </Link>
-            <Link to="/pricing" className="btn btn-secondary text-lg px-8 py-3">
-              View Pricing
-            </Link>
-          </>
-        )}
-      </div>
+            <div className="flex flex-col sm:flex-row gap-5">
+              {user ? (
+                <Link to="/dashboard" className="btn btn-primary text-lg px-10 py-4">
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link to="/signup" className="btn btn-primary text-lg px-10 py-4 shadow-2xl">
+                    Create My Resume Now
+                  </Link>
+                  <Link to="/pricing" className="btn btn-secondary text-lg px-10 py-4">
+                    See All Features
+                  </Link>
+                </>
+              )}
+            </div>
+
+            {/* Social Proof */}
+            <div className="mt-16 pt-12 border-t border-[var(--border-color)] w-full max-w-4xl opacity-60">
+              <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-8">Trusted by candidates at</p>
+              <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 grayscale brightness-125">
+                <span className="text-xl font-bold">GOOGLE</span>
+                <span className="text-xl font-bold">META</span>
+                <span className="text-xl font-bold">AMAZON</span>
+                <span className="text-xl font-bold">NETFLIX</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full text-left">
-        <div className="card">
-          <div className="text-3xl mb-4">🤖</div>
-          <h3 className="text-xl font-bold mb-2 text-white">AI Enhancement</h3>
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            Automatically rewrite weak bullet points into impactful, results-driven statements using the STAR method.
-          </p>
+      <section className="py-24 bg-[var(--bg-secondary)]">
+        <div className="container-app">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Why Choose ResumeAI?</h2>
+            <p className="text-[var(--text-secondary)] max-w-2xl mx-auto">Everything you need to stand out from the competition and get hired faster.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, idx) => (
+              <div key={idx} className="card group hover:-translate-y-2">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 transition-colors group-hover:bg-primary/20">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                <p className="text-[var(--text-secondary)] leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="card">
-          <div className="text-3xl mb-4">📊</div>
-          <h3 className="text-xl font-bold mb-2 text-white">Smart Scoring</h3>
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            Get an instant ATS compatibility score and actionable feedback to improve your resume's impact.
-          </p>
+      </section>
+
+      {/* Stats / Impact Section */}
+      <section className="py-24">
+        <div className="container-app">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+            <div className="flex flex-col items-center">
+              <span className="text-5xl font-extrabold gradient-text mb-2">95%</span>
+              <span className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider">Success Rate</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-5xl font-extrabold gradient-text mb-2">10k+</span>
+              <span className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider">Resumes Created</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-5xl font-extrabold gradient-text mb-2">2x</span>
+              <span className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-wider">More Interviews</span>
+            </div>
+          </div>
         </div>
-        <div className="card">
-          <div className="text-3xl mb-4">🎨</div>
-          <h3 className="text-xl font-bold mb-2 text-white">Premium Templates</h3>
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            Choose from carefully crafted templates designed to pass ATS and impress human recruiters.
-          </p>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24">
+        <div className="container-app">
+          <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-indigo-600 to-blue-700 p-8 md:p-16 text-center text-white shadow-2xl">
+            <div className="relative z-10 max-w-2xl mx-auto">
+              <h2 className="text-3xl md:text-5xl font-bold mb-6">Ready to land your dream job?</h2>
+              <p className="text-lg opacity-90 mb-10">
+                Join thousands of successful candidates who used ResumeAI to build their professional profiles.
+              </p>
+              <Link to="/signup" className="bg-white text-indigo-600 font-bold px-10 py-4 rounded-xl hover:bg-opacity-90 transition-all inline-block shadow-lg">
+                Get Started for Free
+              </Link>
+            </div>
+            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl"></div>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };
