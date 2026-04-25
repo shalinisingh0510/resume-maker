@@ -5,9 +5,6 @@ const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:500
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
 });
 
 // Add auth token to requests

@@ -1,5 +1,7 @@
 const express = require('express');
 const Groq = require('groq-sdk');
+const multer = require('multer');
+const pdf = require('pdf-parse');
 const User = require('../models/User');
 const Resume = require('../models/Resume');
 const { protect, checkAILimit } = require('../middleware/auth');
@@ -8,6 +10,20 @@ const router = express.Router();
 
 // Initialize Groq client
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// Multer config for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || file.mimetype === 'text/plain') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .pdf and .txt files are supported'), false);
+    }
+  }
+});
 
 // Helper: Build resume text from structured data
 const buildResumeText = (resume) => {
@@ -121,23 +137,27 @@ Format your response as a JSON object with these keys:
     });
   } catch (error) {
     console.error('AI Enhance Error:', error);
-
-    if (error.message && error.message.includes('API')) {
-      return res.status(503).json({ message: 'AI service temporarily unavailable. Please try again later.' });
-    }
-
     res.status(500).json({ message: 'Error processing AI enhancement' });
   }
 });
 
-// POST /api/ai/score - AI Resume Scoring (unlimited for all users)
-router.post('/score', protect, async (req, res) => {
+// POST /api/ai/score - AI Resume Scoring with Job Profile Support & File Upload
+router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async (req, res) => {
   try {
-    const { resumeId, resumeText } = req.body;
-
+    const { resumeId, resumeText, jobTitle } = req.body;
     let textToScore = resumeText;
 
-    if (resumeId && !resumeText) {
+    // 1. Handle File Upload
+    if (req.file) {
+      if (req.file.mimetype === 'application/pdf') {
+        const data = await pdf(req.file.buffer);
+        textToScore = data.text;
+      } else {
+        textToScore = req.file.buffer.toString('utf-8');
+      }
+    } 
+    // 2. Handle Resume ID from DB
+    else if (resumeId && !resumeText) {
       const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
       if (!resume) {
         return res.status(404).json({ message: 'Resume not found' });
@@ -149,30 +169,33 @@ router.post('/score', protect, async (req, res) => {
       return res.status(400).json({ message: 'No resume content provided for scoring' });
     }
 
+    const targetJob = jobTitle || 'General Professional';
+
     const completion = await groq.chat.completions.create({
       messages: [
         {
           role: 'system',
-          content: `You are an expert resume evaluator and ATS (Applicant Tracking System) specialist. Analyze the given resume and provide a comprehensive score and feedback.
+          content: `You are an expert resume evaluator and ATS (Applicant Tracking System) specialist. 
+Analyze the given resume specifically for the role of: ${targetJob}.
 
-Score the resume on a scale of 0-100 based on these criteria:
-- **Content Quality (25 pts)**: Action verbs, quantified achievements, relevance
-- **Formatting & Structure (20 pts)**: Organization, readability, section ordering
-- **ATS Compatibility (20 pts)**: Keywords, standard formatting, parsability
-- **Impact & Results (20 pts)**: Measurable outcomes, value demonstration
-- **Completeness (15 pts)**: All essential sections present, sufficient detail
+Score the resume on a scale of 0-100 based on these criteria relative to the ${targetJob} role:
+- **Role Relevance (25 pts)**: How well the experience and skills match ${targetJob} requirements.
+- **Content Quality (20 pts)**: Action verbs, quantified achievements.
+- **ATS Compatibility (20 pts)**: Keywords for ${targetJob}, standard formatting.
+- **Impact & Results (20 pts)**: Measurable outcomes.
+- **Completeness (15 pts)**: All essential sections present.
 
 Format your response as a JSON object with these keys:
 - "overallScore": number 0-100
-- "breakdown": object with scores for each criterion (contentQuality, formatting, atsCompatibility, impact, completeness) each with "score" (number) and "maxScore" (number)
+- "breakdown": object with scores for each criterion (roleRelevance, contentQuality, atsCompatibility, impact, completeness) each with "score" (number) and "maxScore" (number)
 - "strengths": array of 3-5 strength points
 - "weaknesses": array of 3-5 areas to improve
 - "suggestions": array of 5-8 actionable improvement suggestions
-- "summary": a 2-3 sentence overview of the resume quality`
+- "summary": a 2-3 sentence overview of the resume quality for a ${targetJob} position.`
         },
         {
           role: 'user',
-          content: `Please score and analyze this resume:\n\n${textToScore}`
+          content: `Please score and analyze this resume for a ${targetJob} position:\n\n${textToScore}`
         }
       ],
       model: 'llama-3.3-70b-versatile',
@@ -183,7 +206,12 @@ Format your response as a JSON object with these keys:
 
     const aiResponse = JSON.parse(completion.choices[0].message.content);
 
-    // Optionally save score to resume
+    // Increment AI usage count for the user
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { aiUsageCount: 1 }
+    });
+
+    // Optionally save score to resume if ID was provided
     if (resumeId) {
       await Resume.findByIdAndUpdate(resumeId, {
         aiScore: aiResponse.overallScore,
@@ -193,15 +221,11 @@ Format your response as a JSON object with these keys:
 
     res.json({
       success: true,
-      data: aiResponse
+      data: aiResponse,
+      aiUsageCount: req.user.aiUsageCount + 1
     });
   } catch (error) {
     console.error('AI Score Error:', error);
-
-    if (error.message && error.message.includes('API')) {
-      return res.status(503).json({ message: 'AI service temporarily unavailable. Please try again later.' });
-    }
-
     res.status(500).json({ message: 'Error processing AI scoring' });
   }
 });

@@ -53,9 +53,9 @@ const checkAILimit = async (req, res, next) => {
   try {
     if (req.user.subscriptionType === 'premium') return next();
 
-    if (req.user.aiUsageCount >= 2) {
+    if (req.user.aiUsageCount >= 3) {
       return res.status(403).json({
-        message: 'Free plan AI enhancement limit reached. Maximum 2 enhancements allowed. Upgrade to Premium for unlimited AI usage.',
+        message: 'Free plan AI usage limit reached. Maximum 3 analyses/enhancements allowed. Upgrade to Premium for unlimited AI usage.',
         limitReached: true
       });
     }
