@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { resumeAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -26,6 +26,7 @@ const initialResumeState = {
 
 const ResumeBuilder = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [resume, setResume] = useState(initialResumeState);
@@ -49,8 +50,14 @@ const ResumeBuilder = () => {
   useEffect(() => {
     if (id) {
       fetchResume();
+    } else {
+      // Handle template pre-selection from URL
+      const preSelectedTemplate = searchParams.get('template');
+      if (preSelectedTemplate) {
+        setResume(prev => ({ ...prev, template: preSelectedTemplate }));
+      }
     }
-  }, [id]);
+  }, [id, searchParams]);
 
   const fetchResume = async () => {
     try {
