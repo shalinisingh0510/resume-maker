@@ -1,95 +1,117 @@
 const JOB_KEYWORDS = {
-  'General Professional': {
-    mandatory: ['experience', 'education', 'skills', 'projects', 'communication', 'teamwork'],
-    optional: ['leadership', 'management', 'problem solving', 'strategy', 'collaboration']
-  },
   'SDE 1 (Software Development Engineer I)': {
-    mandatory: ['data structures', 'algorithms', 'python', 'java', 'javascript', 'git', 'coding', 'debugging'],
-    optional: ['problem solving', 'c++', 'sql', 'react', 'node.js', 'software development', 'internship', 'computer science']
+    skills: ['data structures', 'algorithms', 'python', 'java', 'javascript', 'git', 'coding', 'debugging', 'c++', 'sql', 'unit testing'],
+    maang_focus: ['big o notation', 'complexity analysis', 'problem solving', 'leetcoding'],
+    startup_focus: ['mvp', 'rapid development', 'agile', 'product mindset', 'versatility']
   },
   'SDE 2 (Software Development Engineer II)': {
-    mandatory: ['system design', 'scalability', 'distributed systems', 'microservices', 'mentoring', 'code review', 'java', 'python', 'aws'],
-    optional: ['kubernetes', 'docker', 'cloud architecture', 'performance optimization', 'api design', 'high availability']
+    skills: ['system design', 'scalability', 'distributed systems', 'microservices', 'mentoring', 'code review', 'java', 'python', 'aws', 'api design'],
+    maang_focus: ['high availability', 'load balancing', 'sharding', 'design patterns', 'concurrency'],
+    startup_focus: ['full-stack', 'deployment', 'ownership', 'infrastructure as code', 'user experience']
   },
   'Full Stack Developer': {
-    mandatory: ['react', 'node.js', 'javascript', 'html', 'css', 'sql', 'rest api', 'frontend', 'backend'],
-    optional: ['typescript', 'mongodb', 'express', 'next.js', 'aws', 'docker', 'graphql', 'tailwind']
+    skills: ['react', 'node.js', 'javascript', 'html', 'css', 'sql', 'rest api', 'typescript', 'mongodb', 'express', 'next.js', 'graphql'],
+    maang_focus: ['performance optimization', 'security', 'accessibility', 'component architecture'],
+    startup_focus: ['firebase', 'vercel', 'supabase', 'fast prototyping', 'analytics', 'growth']
   },
   'Gen AI Developer': {
-    mandatory: ['llm', 'large language models', 'python', 'pytorch', 'tensorflow', 'prompt engineering', 'langchain', 'openai'],
-    optional: ['rag', 'vector databases', 'fine-tuning', 'hugging face', 'transformers', 'mlops', 'nlp', 'embeddings']
+    skills: ['llm', 'large language models', 'python', 'pytorch', 'tensorflow', 'prompt engineering', 'langchain', 'openai', 'rag', 'vector databases'],
+    maang_focus: ['transformer architecture', 'model quantization', 'fine-tuning', 'distributed training'],
+    startup_focus: ['api integration', 'mvp AI apps', 'user-centric AI', 'cost optimization']
   },
   'Data Scientist': {
-    mandatory: ['python', 'statistics', 'machine learning', 'sql', 'pandas', 'numpy', 'data analysis', 'modeling'],
-    optional: ['scikit-learn', 'deep learning', 'r', 'tableau', 'big data', 'hadoop', 'spark', 'visualization']
+    skills: ['python', 'statistics', 'machine learning', 'sql', 'pandas', 'numpy', 'data analysis', 'modeling', 'scikit-learn', 'deep learning'],
+    maang_focus: ['large scale data', 'spark', 'hadoop', 'ab testing at scale', 'statistical significance'],
+    startup_focus: ['business insights', 'predictive modeling', 'data cleaning', 'automated reporting']
   },
   'Data Analyst': {
-    mandatory: ['sql', 'excel', 'data visualization', 'tableau', 'power bi', 'data cleaning', 'reporting', 'statistics'],
-    optional: ['python', 'pandas', 'google analytics', 'eda', 'dashboard', 'sql queries', 'metrics']
-  },
-  'Frontend Developer': {
-    mandatory: ['javascript', 'react', 'html', 'css', 'typescript', 'responsive design', 'browser tools'],
-    optional: ['redux', 'next.js', 'tailwind', 'vue', 'angular', 'webpack', 'figma', 'ui/ux']
-  },
-  'Backend Developer': {
-    mandatory: ['node.js', 'python', 'java', 'sql', 'rest api', 'database', 'authentication', 'server'],
-    optional: ['express', 'django', 'postgresql', 'mongodb', 'redis', 'microservices', 'c#', 'golang']
-  },
-  'DevOps Engineer': {
-    mandatory: ['ci/cd', 'docker', 'kubernetes', 'aws', 'terraform', 'linux', 'bash', 'monitoring'],
-    optional: ['ansible', 'jenkins', 'gcp', 'azure', 'git', 'networking', 'security', 'python']
+    skills: ['sql', 'excel', 'data visualization', 'tableau', 'power bi', 'data cleaning', 'reporting', 'statistics', 'kpi'],
+    maang_focus: ['data governance', 'sql optimization', 'complex joins', 'data pipelines'],
+    startup_focus: ['dashboards', 'adhoc analysis', 'marketing analytics', 'product metrics']
   }
 };
 
-const calculateLocalATSScore = (text, role) => {
+const COMPANY_TIERS = {
+  MAANG: ['google', 'meta', 'amazon', 'apple', 'netflix', 'microsoft', 'uber', 'airbnb', 'stripe'],
+  STARTUP: ['early stage', 'series a', 'series b', 'fast-paced', 'scaling']
+};
+
+const tokenize = (text) => {
+  return text.toLowerCase().split(/[\s,.\-()\n]+/).filter(t => t.length > 2);
+};
+
+const analyzeEducation = (text) => {
+  const normalized = text.toLowerCase();
+  const tiers = {
+    tier1: ['iit', 'nit', 'bits', 'stanford', 'mit', 'harvard', 'cmu', 'berkeley', 'iim', 'ivy league'],
+    degrees: ['b.tech', 'm.tech', 'phd', 'bachelor', 'master', 'cs', 'computer science', 'engineering']
+  };
+  
+  const foundTier1 = tiers.tier1.filter(univ => normalized.includes(univ));
+  const foundDegrees = tiers.degrees.filter(deg => normalized.includes(deg));
+  
+  let score = 50; // Base education score
+  if (foundTier1.length > 0) score += 40;
+  if (foundDegrees.length > 0) score += 10;
+  
+  return { score, foundTier1, foundDegrees };
+};
+
+const analyzeSummary = (text) => {
+  const length = text.split(/\s+/).length;
+  const hasActionVerbs = ['developed', 'led', 'managed', 'created', 'optimized', 'scaled', 'built'].some(v => text.toLowerCase().includes(v));
+  
+  let score = 40;
+  if (length > 20 && length < 100) score += 30;
+  if (hasActionVerbs) score += 30;
+  
+  return { score, length, hasActionVerbs };
+};
+
+const calculateComprehensiveATSReport = (text, role, companyType = 'GENERAL') => {
+  const tokens = tokenize(text);
   const normalizedText = text.toLowerCase();
-  const roleData = JOB_KEYWORDS[role] || JOB_KEYWORDS['General Professional'];
+  const roleData = JOB_KEYWORDS[role] || JOB_KEYWORDS['SDE 1 (Software Development Engineer I)'];
   
-  const allKeywords = [...roleData.mandatory, ...roleData.optional];
-  const matched = [];
-  const missing = [];
+  // Keyword Analysis
+  const matchedSkills = roleData.skills.filter(s => normalizedText.includes(s.toLowerCase()));
+  const missingSkills = roleData.skills.filter(s => !normalizedText.includes(s.toLowerCase()));
   
-  roleData.mandatory.forEach(kw => {
-    if (normalizedText.includes(kw.toLowerCase())) matched.push(kw);
-    else missing.push(kw);
-  });
+  // Tier Specific Analysis
+  const matchedMaang = roleData.maang_focus.filter(s => normalizedText.includes(s.toLowerCase()));
+  const matchedStartup = roleData.startup_focus.filter(s => normalizedText.includes(s.toLowerCase()));
   
-  roleData.optional.forEach(kw => {
-    if (normalizedText.includes(kw.toLowerCase())) matched.push(kw);
-    else missing.push(kw);
-  });
+  // Analyzers
+  const edu = analyzeEducation(text);
+  const summaryAnalysis = analyzeSummary(text.substring(0, 500)); // Assume summary is at start
 
-  // Basic scoring logic:
-  // Mandatory: 60% of score (normalized by count)
-  // Optional: 40% of score (normalized by count)
-  const mandatoryWeight = 60;
-  const optionalWeight = 40;
-  
-  const mandatoryScore = roleData.mandatory.length > 0 
-    ? (matched.filter(kw => roleData.mandatory.includes(kw)).length / roleData.mandatory.length) * mandatoryWeight 
-    : mandatoryWeight;
-    
-  const optionalScore = roleData.optional.length > 0 
-    ? (matched.filter(kw => roleData.optional.includes(kw)).length / roleData.optional.length) * optionalWeight 
-    : optionalWeight;
-    
-  const keywordMatchScore = Math.round(mandatoryScore + optionalScore);
-
-  // Structural score: check for standard sections
-  const sections = ['experience', 'education', 'skills', 'projects', 'summary'];
-  let sectionScore = 0;
-  sections.forEach(s => { if (normalizedText.includes(s)) sectionScore += 20; });
-  
-  // Final weighted score: 70% keyword, 30% section
-  const overallScore = Math.round((keywordMatchScore * 0.7) + (sectionScore * 0.3));
+  // Calculate Sub-scores
+  const skillScore = (matchedSkills.length / roleData.skills.length) * 100;
+  const focusScore = companyType === 'MAANG' 
+    ? (matchedMaang.length / roleData.maang_focus.length) * 100 
+    : companyType === 'STARTUP' 
+      ? (matchedStartup.length / roleData.startup_focus.length) * 100
+      : ((matchedMaang.length + matchedStartup.length) / (roleData.maang_focus.length + roleData.startup_focus.length)) * 100;
 
   return {
-    overallScore: Math.min(overallScore, 100),
-    matched,
-    missing,
-    keywordMatchScore,
-    sectionScore
+    role,
+    companyType,
+    skillAnalysis: {
+      score: Math.round(skillScore),
+      matched: matchedSkills,
+      missing: missingSkills
+    },
+    focusAnalysis: {
+      type: companyType,
+      matched: companyType === 'MAANG' ? matchedMaang : companyType === 'STARTUP' ? matchedStartup : [...matchedMaang, ...matchedStartup]
+    },
+    education: edu,
+    summary: summaryAnalysis,
+    resumeStats: {
+      wordCount: text.split(/\s+/).length,
+      tokenCount: tokens.length
+    }
   };
 };
 
-module.exports = { calculateLocalATSScore, JOB_KEYWORDS };
+module.exports = { calculateComprehensiveATSReport, JOB_KEYWORDS };
