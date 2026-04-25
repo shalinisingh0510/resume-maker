@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const aiRoutes = require('./routes/ai');
+const templateRoutes = require('./routes/template');
+const roadmapRoutes = require('./routes/roadmap');
 
 // Load env vars
 dotenv.config();
@@ -23,7 +26,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/resume', require('./routes/resume'));
 app.use('/api/resumes', require('./routes/resume'));
-app.use('/api/ai', require('./routes/ai'));
+app.use('/api/ai', aiRoutes);
+app.use('/api/templates', templateRoutes);
+app.use('/api/roadmap', roadmapRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

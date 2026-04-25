@@ -1,9 +1,26 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { HiSparkles, HiCheckCircle, HiDeviceMobile, HiGlobeAlt, HiLightningBolt } from 'react-icons/hi';
+import { templateAPI } from '../services/api';
+import { HiSparkles, HiCheckCircle, HiDeviceMobile, HiGlobeAlt, HiLightningBolt, HiArrowRight } from 'react-icons/hi';
 
 const Home = () => {
   const { user } = useAuth();
+  const [featuredTemplates, setFeaturedTemplates] = useState([]);
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const res = await templateAPI.getAll('all');
+        // Just take the first few distinct categories
+        const featured = res.data.slice(0, 4);
+        setFeaturedTemplates(featured);
+      } catch (err) {
+        console.error('Failed to fetch featured templates');
+      }
+    };
+    fetchFeatured();
+  }, []);
 
   const features = [
     {
@@ -82,6 +99,42 @@ const Home = () => {
                 <span className="text-xl font-bold">NETFLIX</span>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Template Showcase */}
+      <section className="py-24 overflow-hidden">
+        <div className="container-app">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+            <div className="max-w-2xl">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">Professional Templates</h2>
+              <p className="text-[var(--text-secondary)]">Choose from 50+ battle-tested templates designed to pass any ATS and wow recruiters.</p>
+            </div>
+            <Link to="/signup" className="group flex items-center gap-2 text-primary font-bold hover:underline">
+              View all 50+ templates <HiArrowRight className="transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {featuredTemplates.length > 0 ? (
+              featuredTemplates.map((tpl) => (
+                <div key={tpl._id} className="group cursor-pointer">
+                  <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-[var(--border-color)] mb-4 shadow-sm group-hover:shadow-xl group-hover:-translate-y-2 transition-all duration-500">
+                    <img src={tpl.thumbnail} alt={tpl.name} className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all" />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                       <button className="w-full py-2 bg-white text-black font-bold rounded-lg text-sm">Use Template</button>
+                    </div>
+                  </div>
+                  <h3 className="font-bold text-center">{tpl.name}</h3>
+                  <p className="text-xs text-[var(--text-muted)] text-center capitalize">{tpl.category}</p>
+                </div>
+              ))
+            ) : (
+              [1,2,3,4].map(i => (
+                <div key={i} className="aspect-[3/4] rounded-2xl bg-[var(--bg-secondary)] animate-pulse"></div>
+              ))
+            )}
           </div>
         </div>
       </section>

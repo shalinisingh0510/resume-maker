@@ -45,6 +45,11 @@ export const resumeAPI = {
   delete: (id) => api.delete(`/resume/${id}`)
 };
 
+export const templateAPI = {
+  getAll: (category) => api.get('/templates', { params: { category } }),
+  getOne: (id) => api.get(`/templates/${id}`),
+};
+
 // ==================== AI ====================
 export const aiAPI = {
   enhance: (data) => api.post('/ai/enhance', data),
