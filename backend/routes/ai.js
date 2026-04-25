@@ -104,6 +104,13 @@ const cleanAIResponse = (content) => {
 // POST /api/ai/enhance - AI Resume Enhancement
 router.post('/enhance', protect, checkAILimit, async (req, res) => {
   try {
+    // Check if Groq API is configured
+    if (!groq) {
+      return res.status(503).json({ 
+        message: 'AI service is not configured. Please set up the GROQ_API_KEY environment variable.' 
+      });
+    }
+
     const { resumeId, type, content, prompt } = req.body || {};
     
     // Handle LaTeX enhancement
@@ -159,6 +166,12 @@ Return ONLY the enhanced LaTeX code without any explanations or markdown formatt
     }
 
     const truncatedText = textToEnhance.substring(0, 4000);
+
+    if (!groq) {
+      return res.status(503).json({ 
+        message: 'AI service is not configured. Please set up the GROQ_API_KEY environment variable.' 
+      });
+    }
 
     const completion = await groq.chat.completions.create({
       messages: [
