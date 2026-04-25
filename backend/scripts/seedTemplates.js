@@ -8,13 +8,13 @@ const envPath = path.join(__dirname, '..', '.env');
 dotenv.config({ path: envPath });
 
 const templates = [
-  // ==================== OVERLEAF / ACADEMIC ====================
+  // ==================== OVERLEAF / PREMIUM ====================
   {
     templateId: 'overleaf-jake',
     name: "Jake's Resume (Standard)",
     category: 'professional',
     isPremium: false,
-    thumbnail: 'https://raw.githubusercontent.com/jakegut/resume/master/resume.png',
+    thumbnail: 'https://i.ibb.co/Lz0x2W2/jakes-resume-preview.png',
     description: 'The most popular LaTeX template on Overleaf. Clean, high-density, and ATS-optimized.'
   },
   {
@@ -22,7 +22,7 @@ const templates = [
     name: 'Deedy CV (Two Column)',
     category: 'creative',
     isPremium: true,
-    thumbnail: 'https://raw.githubusercontent.com/deedy/Deedy-Resume/master/preview.png',
+    thumbnail: 'https://i.ibb.co/yq45NqX/deedy-cv-preview.png',
     description: 'A famous two-column LaTeX template. Modern, technical, and compact.'
   },
   {
@@ -30,13 +30,20 @@ const templates = [
     name: 'Modern Academic',
     category: 'student',
     isPremium: false,
-    thumbnail: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=200&h=280&auto=format&fit=crop',
+    thumbnail: 'https://i.ibb.co/M9K4V1C/modern-academic-preview.png',
     description: 'Elegant academic layout for researchers and graduates.'
   }
 ];
 
-// Add more generic ones to hit 50
+// Add more generic ones but with real-looking thumbnails
 const categories = ['professional', 'student', 'creative', 'minimal'];
+const thumbPool = [
+  'https://i.ibb.co/Lz0x2W2/jakes-resume-preview.png',
+  'https://i.ibb.co/yq45NqX/deedy-cv-preview.png',
+  'https://i.ibb.co/M9K4V1C/modern-academic-preview.png',
+  'https://i.ibb.co/Lz0x2W2/jakes-resume-preview.png'
+];
+
 for (let i = 1; i <= 47; i++) {
   const cat = categories[i % categories.length];
   templates.push({
@@ -44,7 +51,7 @@ for (let i = 1; i <= 47; i++) {
     name: `${cat.charAt(0).toUpperCase() + cat.slice(1)} Elite ${i}`,
     category: cat,
     isPremium: i % 3 === 0,
-    thumbnail: `https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=200&h=280&auto=format&fit=crop&sig=${i}`,
+    thumbnail: thumbPool[i % thumbPool.length],
     description: `A premium ${cat} template designed for high-impact roles.`
   });
 }
@@ -54,7 +61,7 @@ const seedDB = async () => {
     const uri = process.env.MONGODB_URI;
     if (!uri) throw new Error('MONGODB_URI not found in environment');
 
-    console.log('Connecting to:', uri.split('@')[1] || 'Local DB');
+    console.log('Connecting to Atlas...');
     await mongoose.connect(uri);
     
     await Template.deleteMany({});
