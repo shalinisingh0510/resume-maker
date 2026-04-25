@@ -98,8 +98,15 @@ const AITools = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.type !== 'application/pdf' && file.type !== 'text/plain') {
+      const name = (file.name || '').toLowerCase();
+      const isPdf = name.endsWith('.pdf');
+      const isTxt = name.endsWith('.txt');
+      if (!isPdf && !isTxt) {
         toast.error('Please upload a PDF or TXT file');
+        return;
+      }
+      if (file.size > 15 * 1024 * 1024) {
+        toast.error('File is too large. Maximum size is 15MB.');
         return;
       }
       setResumeFile(file);

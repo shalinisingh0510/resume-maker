@@ -13,6 +13,7 @@ const CATEGORIES = [
   { id: 'student', name: 'Student' },
   { id: 'creative', name: 'Creative' },
   { id: 'minimal', name: 'Minimal' },
+  { id: 'clean', name: 'Clean' },
   { id: 'premium', name: 'Premium (PRO)' }
 ];
 
@@ -30,7 +31,7 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const res = await templateAPI.getAll(activeCategory);
+      const res = await templateAPI.getAll(activeCategory, searchTerm.trim() || undefined);
       setTemplates(res.data || []);
     } catch (error) {
       toast.error('Failed to load templates');
@@ -46,7 +47,8 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
     return (
       tpl.name?.toLowerCase().includes(keyword) ||
       tpl.description?.toLowerCase().includes(keyword) ||
-      tpl.subcategory?.toLowerCase().includes(keyword)
+      tpl.subcategory?.toLowerCase().includes(keyword) ||
+      tpl.source?.provider?.toLowerCase().includes(keyword)
     );
   });
 
@@ -107,18 +109,20 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
               >
                 <div className="relative aspect-[3/4] bg-[var(--bg-secondary)] overflow-hidden">
                   <div className={`absolute inset-0 ${isLocked ? 'blur-[2px] grayscale opacity-70' : ''}`}>
-                    <div className="flex justify-center pt-2">
+                    <div className="absolute inset-0 flex items-start justify-center">
                       <div
                         className="pointer-events-none"
                         style={{
-                          width: '170px',
-                          transform: 'scale(0.21)',
+                          width: '800px',
+                          height: '1122px',
+                          transform: 'scale(0.38)',
                           transformOrigin: 'top center'
                         }}
                       >
                         <ResumePreview
                           resume={SAMPLE_RESUME}
                           template={tpl.templateId}
+                          templateLayout={tpl?.config?.layoutKey}
                           className="shadow-none border border-slate-200"
                         />
                       </div>
@@ -157,7 +161,8 @@ const TemplateGallery = ({ selectedTemplate, onSelect }) => {
                   <p className="text-[9px] text-[var(--text-muted)] line-clamp-1">{tpl.description}</p>
                   <div className="mt-2 text-[9px] uppercase tracking-wider text-[var(--text-muted)]">
                     {tpl.category}
-                    {tpl.subcategory ? ` • ${tpl.subcategory}` : ''}
+                    {tpl.subcategory ? ` | ${tpl.subcategory}` : ''}
+                    {tpl.source?.provider ? ` | ${tpl.source.provider}` : ''}
                   </div>
                 </div>
               </div>

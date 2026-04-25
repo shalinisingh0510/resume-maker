@@ -58,4 +58,9 @@ export const aiAPI = {
   score: (data) => api.post('/ai/score', data)
 };
 
+export const latexAPI = {
+  compile: (data) => api.post('/latex/compile', data),
+  getTemplateSource: (templateId) => api.get(`/latex/template-source/${templateId}`)
+};
+
 export default api;

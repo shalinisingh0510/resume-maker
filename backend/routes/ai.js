@@ -1,11 +1,11 @@
 const express = require('express');
 const Groq = require('groq-sdk');
 const multer = require('multer');
-const pdf = require('pdf-parse');
 const User = require('../models/User');
 const Resume = require('../models/Resume');
 const { protect, checkAILimit } = require('../middleware/auth');
 const { calculateComprehensiveATSReport } = require('../utils/atsEngine');
+const { extractTextFromPdf } = require('../utils/pdfExtractor');
 
 const router = express.Router();
 
@@ -19,8 +19,31 @@ const upload = multer({
   limits: { 
     fileSize: 15 * 1024 * 1024, // 15MB
     files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    const lowerName = (file.originalname || '').toLowerCase();
+    const isPdf = lowerName.endsWith('.pdf');
+    const isTxt = lowerName.endsWith('.txt');
+    const mime = file.mimetype || '';
+    const allowedMime =
+      mime === 'application/pdf' ||
+      mime === 'text/plain' ||
+      mime === 'application/octet-stream';
+
+    if ((isPdf || isTxt) && allowedMime) {
+      return cb(null, true);
+    }
+
+    cb(new Error('Only PDF or TXT files are supported for ATS scoring.'));
   }
 });
+
+const scoreUpload = (req, res, next) => {
+  upload.single('resumeFile')(req, res, (err) => {
+    if (!err) return next();
+    return res.status(400).json({ message: err.message || 'Invalid resume upload.' });
+  });
+};
 
 // Helper: Build resume text from structured data
 const buildResumeText = (resume) => {
@@ -98,7 +121,7 @@ router.post('/enhance', protect, checkAILimit, async (req, res) => {
 });
 
 // POST /api/ai/score - Comprehensive Hybrid ATS scoring
-router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async (req, res) => {
+router.post('/score', protect, checkAILimit, scoreUpload, async (req, res) => {
   try {
     const { resumeId, resumeText, jobTitle, companyName, companyType } = req.body;
     let fullText = '';
@@ -112,16 +135,11 @@ router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async 
       if (isPdf) {
         try {
           // options to make it more robust
-          const options = {
-            pagerender: (pageData) => {
-              return pageData.getTextContent().then(textContent => {
-                return textContent.items.map(item => item.str).join(' ');
-              });
-            }
-          };
-          
-          const data = await pdf(req.file.buffer);
-          fullText = data.text;
+          const { text, errors } = await extractTextFromPdf(req.file.buffer);
+          fullText = text;
+          if (errors.length) {
+            console.warn('PDF extraction warnings:', errors.join(' | '));
+          }
           
           // If extracted text is suspiciously short, try raw string extraction as a last resort
           if (!fullText || fullText.trim().length < 100) {

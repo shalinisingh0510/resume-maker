@@ -20,7 +20,8 @@ const templateAliases = {
   'professional-compact-lite': 'classic'
 };
 
-const getLayoutKey = (templateId = '') => {
+const getLayoutKey = (templateId = '', providedLayoutKey = '') => {
+  if (providedLayoutKey) return providedLayoutKey;
   if (templateAliases[templateId]) return templateAliases[templateId];
 
   if (templateId.includes('student')) return 'student';
@@ -451,14 +452,14 @@ const renderByTemplate = ({ layoutKey, props }) => {
   }
 };
 
-const ResumePreview = forwardRef(({ resume, template = 'overleaf-jake', className = '' }, ref) => {
+const ResumePreview = forwardRef(({ resume, template = 'overleaf-jake', templateLayout = '', className = '' }, ref) => {
   const p = resume?.personalDetails || {};
   const edu = Array.isArray(resume?.education) ? resume.education : [];
   const exp = Array.isArray(resume?.experience) ? resume.experience : [];
   const skills = Array.isArray(resume?.skills) ? resume.skills : [];
   const proj = Array.isArray(resume?.projects) ? resume.projects : [];
 
-  const layoutKey = getLayoutKey(template);
+  const layoutKey = getLayoutKey(template, templateLayout);
   const accentByLayout = {
     jake: '#111827',
     deedy: '#b91c1c',

@@ -103,18 +103,20 @@ const Home = () => {
             {featuredTemplates.map((tpl) => (
               <div key={tpl._id} className="group card p-0 overflow-hidden cursor-pointer" onClick={() => handleUseTemplate(tpl.templateId)}>
                 <div className="relative aspect-[3/4] bg-[var(--bg-primary)] overflow-hidden">
-                  <div className="absolute inset-0 flex justify-center pt-2 transition-transform duration-700 group-hover:scale-110">
+                  <div className="absolute inset-0 flex justify-center items-start transition-transform duration-700 group-hover:scale-110">
                     <div
                       className="pointer-events-none"
                       style={{
-                        width: '170px',
-                        transform: 'scale(0.21)',
+                        width: '800px',
+                        height: '1122px',
+                        transform: 'scale(0.38)',
                         transformOrigin: 'top center'
                       }}
                     >
                       <ResumePreview
                         resume={SAMPLE_RESUME}
                         template={tpl.templateId}
+                        templateLayout={tpl?.config?.layoutKey}
                         className="shadow-none border border-slate-200"
                       />
                     </div>

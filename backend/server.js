@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const aiRoutes = require('./routes/ai');
 const templateRoutes = require('./routes/template');
+const latexRoutes = require('./routes/latex');
 
 // Load env vars
 dotenv.config();
@@ -27,6 +28,7 @@ app.use('/api/resume', require('./routes/resume'));
 app.use('/api/resumes', require('./routes/resume'));
 app.use('/api/ai', aiRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/latex', latexRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

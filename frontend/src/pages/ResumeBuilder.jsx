@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { resumeAPI, templateAPI } from '../services/api';
+import { resumeAPI, templateAPI, latexAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import ResumePreview from '../components/ResumePreview';
@@ -21,7 +21,8 @@ import {
   HiPlus,
   HiViewGrid,
   HiSparkles,
-  HiLockClosed
+  HiLockClosed,
+  HiTerminal
 } from 'react-icons/hi';
 
 const initialResumeState = {
@@ -82,6 +83,9 @@ const ResumeBuilder = () => {
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
+  const [latexCompiling, setLatexCompiling] = useState(false);
+  const [latexCompiledHtml, setLatexCompiledHtml] = useState('');
+  const [latexCompileError, setLatexCompileError] = useState('');
 
   const previewRef = useRef(null);
 
@@ -92,6 +96,7 @@ const ResumeBuilder = () => {
     { id: 'education', label: 'Education', icon: <HiAcademicCap /> },
     { id: 'skills', label: 'Skills', icon: <HiCode /> },
     { id: 'projects', label: 'Projects', icon: <HiLightningBolt /> },
+    { id: 'latex', label: 'LaTeX', icon: <HiTerminal /> },
     { id: 'ai', label: 'AI Score', icon: <HiSparkles /> },
     { id: 'settings', label: 'Settings', icon: <HiCog /> }
   ];
@@ -100,6 +105,9 @@ const ResumeBuilder = () => {
     () => templates.find((tpl) => tpl.templateId === resume.template),
     [templates, resume.template]
   );
+
+  const selectedTemplateLayoutKey = selectedTemplateMeta?.config?.layoutKey || '';
+  const selectedTemplateLatexSource = selectedTemplateMeta?.config?.defaultLatexSource || '';
 
   const isTemplateLocked = Boolean(
     selectedTemplateMeta?.isPremium && user?.subscriptionType !== 'premium'
@@ -128,6 +136,27 @@ const ResumeBuilder = () => {
     setLoading(false);
   }, [id, searchParams]);
 
+  useEffect(() => {
+    if (!resume.latexSource && selectedTemplateLatexSource) {
+      setResume((prev) => ({ ...prev, latexSource: selectedTemplateLatexSource }));
+    }
+  }, [selectedTemplateLatexSource, resume.latexSource]);
+
+  useEffect(() => {
+    if (!resume.isLatexResume) return;
+    if (activeTab !== 'latex') return;
+    if (!resume.latexSource?.trim()) {
+      setLatexCompiledHtml('');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      compileLatex(resume.latexSource);
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [resume.latexSource, resume.isLatexResume, activeTab]);
+
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
     try {
@@ -150,6 +179,62 @@ const ResumeBuilder = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const compileLatex = async (sourceOverride = '', options = {}) => {
+    const { showToast = false } = options;
+    const source = (sourceOverride || resume.latexSource || '').trim();
+    if (!source) {
+      setLatexCompiledHtml('');
+      setLatexCompileError('Paste or load LaTeX source code first.');
+      return;
+    }
+
+    setLatexCompiling(true);
+    setLatexCompileError('');
+    try {
+      const res = await latexAPI.compile({ latexSource: source });
+      const html = res?.data?.data?.html || '';
+      setLatexCompiledHtml(html);
+      if (showToast) {
+        toast.success('LaTeX compiled successfully.');
+      }
+    } catch (error) {
+      setLatexCompiledHtml('');
+      setLatexCompileError(error.response?.data?.message || 'LaTeX compilation failed.');
+    } finally {
+      setLatexCompiling(false);
+    }
+  };
+
+  const handleTemplateSelection = (templateId) => {
+    const meta = templates.find((tpl) => tpl.templateId === templateId);
+    const defaultLatexSource = meta?.config?.defaultLatexSource || '';
+    setResume((prev) => ({
+      ...prev,
+      template: templateId,
+      latexSource: defaultLatexSource || prev.latexSource
+    }));
+    setLatexCompileError('');
+  };
+
+  const handleLatexDownload = () => {
+    const source = resume.latexSource || '';
+    if (!source.trim()) {
+      toast.error('No LaTeX source to download.');
+      return;
+    }
+
+    const blob = new Blob([source], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const base = (resume.title || resume.personalDetails?.fullName || 'resume')
+      .replace(/\s+/g, '_')
+      .toLowerCase();
+    anchor.href = url;
+    anchor.download = `${base}.tex`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   const captureResumeThumbnail = async () => {
@@ -228,6 +313,10 @@ const ResumeBuilder = () => {
     }
 
     try {
+      if (resume.isLatexResume && !latexCompiledHtml) {
+        await compileLatex(resume.latexSource);
+      }
+
       const element = previewRef.current;
       const opt = {
         margin: [10, 10, 10, 10],
@@ -358,7 +447,7 @@ const ResumeBuilder = () => {
             {activeTab === 'templates' && (
               <TemplateGallery
                 selectedTemplate={resume.template}
-                onSelect={(templateId) => setResume((prev) => ({ ...prev, template: templateId }))}
+                onSelect={handleTemplateSelection}
               />
             )}
 
@@ -571,6 +660,75 @@ const ResumeBuilder = () => {
               </div>
             )}
 
+            {activeTab === 'latex' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="card space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold">LaTeX Editor</h3>
+                      <p className="text-xs text-[var(--text-muted)] mt-1">
+                        Template source is auto-populated from backend when you select a template.
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={resume.isLatexResume}
+                        onChange={(e) =>
+                          setResume((prev) => ({ ...prev, isLatexResume: e.target.checked }))
+                        }
+                      />
+                      Use LaTeX Mode
+                    </label>
+                  </div>
+
+                  <textarea
+                    className="input h-72 font-mono text-xs leading-relaxed"
+                    value={resume.latexSource}
+                    onChange={(e) =>
+                      setResume((prev) => ({ ...prev, latexSource: e.target.value }))
+                    }
+                    placeholder="Paste or edit LaTeX source..."
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => compileLatex(resume.latexSource, { showToast: true })}
+                      disabled={latexCompiling}
+                    >
+                      {latexCompiling ? 'Compiling...' : 'Compile'}
+                    </button>
+                    <button className="btn btn-secondary" onClick={handleLatexDownload}>
+                      Download .tex
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        if (!selectedTemplateLatexSource) {
+                          toast.error('No template source available.');
+                          return;
+                        }
+                        setResume((prev) => ({
+                          ...prev,
+                          latexSource: selectedTemplateLatexSource,
+                          isLatexResume: true
+                        }));
+                      }}
+                    >
+                      Reload Template Source
+                    </button>
+                  </div>
+
+                  {latexCompileError ? (
+                    <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                      {latexCompileError}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'ai' && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="card text-center py-8">
@@ -638,7 +796,31 @@ const ResumeBuilder = () => {
             </div>
           )}
           <div className="w-full max-w-[800px] shadow-2xl origin-top transition-transform">
-            <ResumePreview ref={previewRef} resume={resume} template={resume.template} />
+            {resume.isLatexResume ? (
+              <div
+                ref={previewRef}
+                className="bg-white min-h-[1122px] border border-slate-200"
+              >
+                {latexCompiledHtml ? (
+                  <iframe
+                    title="LaTeX Preview"
+                    srcDoc={latexCompiledHtml}
+                    className="w-full h-[1122px]"
+                  />
+                ) : (
+                  <div className="h-[1122px] flex items-center justify-center text-sm text-slate-500 px-6 text-center">
+                    Compile LaTeX to view live preview.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <ResumePreview
+                ref={previewRef}
+                resume={resume}
+                template={resume.template}
+                templateLayout={selectedTemplateLayoutKey}
+              />
+            )}
           </div>
         </div>
       </div>
