@@ -12,11 +12,14 @@ const router = express.Router();
 // Initialize Groq client
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Multer config for file uploads
+// Multer config - increased limits and better handling
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // Increased to 10MB
+  limits: { 
+    fileSize: 15 * 1024 * 1024, // 15MB
+    files: 1
+  }
 });
 
 // Helper: Build resume text from structured data
@@ -100,38 +103,54 @@ router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async 
     const { resumeId, resumeText, jobTitle, companyName, companyType } = req.body;
     let fullText = '';
 
-    // 1. Extract Text with priority: File > Text > ID
+    // 1. Robust Text Extraction
     if (req.file) {
-      console.log(`Processing uploaded file: ${req.file.originalname} (${req.file.mimetype})`);
-      if (req.file.mimetype === 'application/pdf') {
+      console.log(`Processing file: ${req.file.originalname}, size: ${req.file.size} bytes`);
+      
+      const isPdf = req.file.mimetype === 'application/pdf' || req.file.originalname.toLowerCase().endsWith('.pdf');
+      
+      if (isPdf) {
         try {
+          // options to make it more robust
+          const options = {
+            pagerender: (pageData) => {
+              return pageData.getTextContent().then(textContent => {
+                return textContent.items.map(item => item.str).join(' ');
+              });
+            }
+          };
+          
           const data = await pdf(req.file.buffer);
           fullText = data.text;
-          console.log(`Extracted ${fullText.length} characters from PDF`);
+          
+          // If extracted text is suspiciously short, try raw string extraction as a last resort
+          if (!fullText || fullText.trim().length < 100) {
+             const raw = req.file.buffer.toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+             if (raw.length > fullText.length) fullText = raw;
+          }
         } catch (pdfErr) {
-          console.error('PDF Parse Error:', pdfErr);
-          // Don't use binary string fallback, it creates gibberish.
-          return res.status(400).json({ 
-            message: 'Failed to read PDF. Please ensure it is not password protected or try copying the text manually.',
-            error: pdfErr.message 
-          });
+          console.error('PDF Parse fail:', pdfErr);
+          // Fallback to raw extraction if the library itself crashes
+          fullText = req.file.buffer.toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, ' ');
         }
       } else {
         fullText = req.file.buffer.toString('utf-8');
       }
-    } else if (resumeText && resumeText !== 'undefined' && resumeText.trim().length > 0) {
-      fullText = resumeText;
-    } else if (resumeId && resumeId !== 'undefined') {
-      const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
-      if (!resume) return res.status(404).json({ message: 'Resume not found' });
-      fullText = buildResumeText(resume);
+    } 
+    
+    // If file failed or no file, try other inputs
+    if (!fullText || fullText.trim().length < 50) {
+      if (resumeText && resumeText !== 'undefined' && resumeText.trim().length > 0) {
+        fullText = resumeText;
+      } else if (resumeId && resumeId !== 'undefined') {
+        const resume = await Resume.findOne({ _id: resumeId, user: req.user._id });
+        if (resume) fullText = buildResumeText(resume);
+      }
     }
 
-    // FINAL CHECK: If text is still empty or garbage, fail early
     if (!fullText || fullText.trim().length < 50) {
-      console.log('Final text extraction failed or text too short:', fullText?.substring(0, 50));
       return res.status(400).json({ 
-        message: 'The system could not extract readable text from your resume. Please try pasting the text manually or use a different file format.' 
+        message: 'Could not extract enough text from the resume. Please try pasting the text manually.' 
       });
     }
 
@@ -150,12 +169,12 @@ router.post('/score', protect, checkAILimit, upload.single('resumeFile'), async 
         {
           role: 'system',
           content: `Senior Recruitment Director for ${cType}. Final ATS scoring for ${targetJob} at ${targetCompany}.
-Local Report:
-- Skill Match: ${report.skillAnalysis.score}% (Matched: ${report.skillAnalysis.matched.join(', ')})
-- Education: ${report.education.score}/100
-- Summary: ${report.summary.score}/100
+Local Report Info:
+- Skill Match: ${report.skillAnalysis.score}%
+- Education Tier Match: ${report.education.foundTier1.length > 0 ? 'Yes' : 'No'}
+- Summary Match: ${report.summary.score}/100
 
-Format as JSON: {overallScore (0-100), breakdown, summary, strengths, weaknesses, suggestions, recruiterVerdict}`
+Provide a comprehensive, high-quality analysis in JSON: {overallScore, breakdown, summary, strengths, weaknesses, suggestions, recruiterVerdict}`
         },
         { role: 'user', content: `Resume Context:\n\n${resumeSnippet}` }
       ],
